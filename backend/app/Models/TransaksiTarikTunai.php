@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TransaksiTarikTunai extends Model
+{
+    protected $table = 'transaksi_tarik_tunai';
+    protected $fillable = [
+        'kode_transaksi', 'tanggal', 'nomor_rekening', 'nama_penerima',
+        'nomor_hp', 'nominal_tarik', 'biaya_admin', 'total_bayar',
+        'status', 'kasir'
+    ];
+    protected $casts = ['tanggal' => 'date'];
+}
