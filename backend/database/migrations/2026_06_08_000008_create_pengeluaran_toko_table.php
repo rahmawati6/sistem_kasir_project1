@@ -8,17 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('tabungan_customer', function (Blueprint $table) {
+        Schema::create('pengeluaran_toko', function (Blueprint $table) {
             $table->id();
-            $table->string('kode_tabungan')->unique();
             $table->date('tanggal');
-            $table->string('nama_customer');
-            $table->string('nomor_hp');
+            $table->string('kategori');
+            $table->string('nama_pengeluaran');
             $table->decimal('nominal', 15, 2);
-            $table->decimal('saldo_sebelum', 15, 2)->default(0);
-            $table->decimal('saldo_sesudah', 15, 2);
             $table->text('keterangan')->nullable();
-            $table->enum('status', ['sukses', 'gagal'])->default('sukses');
             $table->string('kasir')->default('admin');
             $table->timestamps();
         });
@@ -26,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('tabungan_customer');
+        Schema::dropIfExists('pengeluaran_toko');
     }
 };

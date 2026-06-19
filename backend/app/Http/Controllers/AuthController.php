@@ -5,19 +5,20 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\ActivityLog;
 
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'username' => 'required',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->username)->first();
+        $user = User::where('email', $data['username'])->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user || !Hash::check($data['password'], $user->password)) {
             return response()->json(['message' => 'Username atau password salah'], 401);
         }
 
@@ -32,20 +33,21 @@ class AuthController extends Controller
 
     public function resetPassword(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'username' => 'required',
             'password' => 'required|min:6|confirmed',
         ]);
 
-        $user = User::where('email', $request->username)->first();
+        $user = User::where('email', $data['username'])->first();
 
         if (!$user) {
             return response()->json(['message' => 'Username tidak ditemukan'], 404);
         }
 
-        $user->password = Hash::make($request->password);
+        $user->password = Hash::make($data['password']);
         $user->tokens()->delete();
         $user->save();
+        ActivityLog::record('Auth', 'reset-password', 'Password admin diperbarui dari form lupa password');
 
         return response()->json(['message' => 'Password berhasil diperbarui']);
     }

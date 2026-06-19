@@ -15,7 +15,9 @@ return new class extends Migration
             }
         });
 
-        DB::statement("ALTER TABLE biaya_admin MODIFY jenis_biaya ENUM('persen','nominal','range') NOT NULL");
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE biaya_admin MODIFY jenis_biaya ENUM('persen','nominal','range') NOT NULL");
+        }
 
         $defaultRange = json_encode([
             ['min' => 1, 'max' => 100000, 'biaya' => 2000],
@@ -36,7 +38,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE biaya_admin MODIFY jenis_biaya ENUM('persen','nominal') NOT NULL");
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE biaya_admin MODIFY jenis_biaya ENUM('persen','nominal') NOT NULL");
+        }
 
         Schema::table('biaya_admin', function (Blueprint $table) {
             if (Schema::hasColumn('biaya_admin', 'aturan_range')) {

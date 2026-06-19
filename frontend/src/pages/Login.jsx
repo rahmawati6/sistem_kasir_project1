@@ -2,13 +2,14 @@ import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { LogIn, Eye, EyeOff, ShieldCheck, User, LockKeyhole, ReceiptText, WalletCards, Package, BarChart3 } from 'lucide-react'
 import sultanCellLogoRound from '../assets/sultan-cell-logo-round.png'
-import api from '../services/api'
+import api, { getApiErrorMessage } from '../services/api'
 
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [messageType, setMessageType] = useState('error')
   const [usernameError, setUsernameError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,7 @@ export default function Login() {
       setForgotAttempts(nextAttempts)
       if (nextAttempts >= 3) {
         setShowResetPassword(true)
+        setMessageType('error')
         setError('Sudah 3 kali gagal. Silakan buat password baru.')
       } else {
         const warning = `${result.message}. Percobaan ${nextAttempts}/3 sebelum reset password.`
@@ -66,17 +68,28 @@ export default function Login() {
     setForgotAttempts(nextAttempts)
     if (nextAttempts >= 3) {
       setShowResetPassword(true)
+      setMessageType('error')
       setError('Silakan buat password baru untuk akun ini.')
     } else {
+      setMessageType('error')
       setError(`Permintaan lupa password tercatat ${nextAttempts}/3.`)
     }
   }
 
   const handleResetPassword = async (e) => {
     e.preventDefault()
-    if (!username.trim()) return setError('Username wajib diisi.')
-    if (newPassword.length < 6) return setError('Password baru minimal 6 karakter.')
-    if (newPassword !== confirmPassword) return setError('Konfirmasi password belum sama.')
+    if (!username.trim()) {
+      setMessageType('error')
+      return setError('Username wajib diisi.')
+    }
+    if (newPassword.length < 6) {
+      setMessageType('error')
+      return setError('Password baru minimal 6 karakter.')
+    }
+    if (newPassword !== confirmPassword) {
+      setMessageType('error')
+      return setError('Konfirmasi password belum sama.')
+    }
 
     setResetLoading(true)
     setError('')
@@ -93,9 +106,11 @@ export default function Login() {
       setConfirmPassword('')
       setForgotAttempts(0)
       setShowResetPassword(false)
+      setMessageType('success')
       setError('Password berhasil diperbarui. Silakan login dengan password baru.')
     } catch (e) {
-      setError(e.response?.data?.message || 'Gagal memperbarui password.')
+      setMessageType('error')
+      setError(getApiErrorMessage(e, 'Gagal memperbarui password.'))
     } finally {
       setResetLoading(false)
     }
@@ -161,7 +176,7 @@ export default function Login() {
           </div>
 
           <form onSubmit={showResetPassword ? handleResetPassword : handleSubmit} className="login-form" noValidate>
-            {showResetPassword && error && <div className="form-error animate-fadeIn">{error}</div>}
+            {error && <div className={`form-error animate-fadeIn ${messageType === 'success' ? 'success' : ''}`}>{error}</div>}
             <label className="field-group">
               <span>Username</span>
               <div className={`input-with-icon ${usernameError ? 'has-error' : ''}`}>

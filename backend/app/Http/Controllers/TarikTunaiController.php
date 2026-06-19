@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\TransaksiTarikTunai;
-use App\Models\BiayaAdmin;
+use App\Models\ActivityLog;
+use App\Services\BrilinkFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -17,23 +18,35 @@ class TarikTunaiController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'nomor_rekening' => 'required',
             'nama_penerima' => 'required',
             'nomor_hp' => 'required',
+            'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_tarik' => 'required|numeric|min:1',
+        ], [
+            'nomor_rekening.required' => 'Nomor rekening wajib diisi.',
+            'nama_penerima.required' => 'Nama penerima wajib diisi.',
+            'nomor_hp.required' => 'Nomor HP wajib diisi.',
+            'jenis_nasabah.required' => 'Jenis nasabah wajib dipilih.',
+            'jenis_nasabah.in' => 'Jenis nasabah tidak valid.',
+            'nominal_tarik.required' => 'Nominal tarik tunai wajib diisi.',
+            'nominal_tarik.numeric' => 'Nominal tarik tunai harus berupa angka.',
+            'nominal_tarik.min' => 'Nominal tarik tunai minimal Rp 1.',
         ]);
 
-        $adminFee = BiayaAdmin::hitung('tarik_tunai', (float) $request->nominal_tarik, 5000);
+        $nominalTarik = (float) $data['nominal_tarik'];
 
-        $data = $request->all();
         $data['kode_transaksi'] = 'TT-' . date('Ymd') . '-' . strtoupper(Str::random(6));
         $data['tanggal'] = Carbon::today();
-        $data['biaya_admin'] = $adminFee;
-        $data['total_bayar'] = $request->nominal_tarik + $adminFee;
+        $data = BrilinkFeeService::withNasabahFee($data, 'tarik_tunai', 'nominal_tarik');
+        $adminFee = BrilinkFeeService::adminFeeFrom($data);
         $data['kasir'] = 'admin';
 
-        return response()->json(TransaksiTarikTunai::create($data), 201);
+        $transaksi = TransaksiTarikTunai::create($data);
+        ActivityLog::record('Tarik Tunai', 'create', 'Admin menambahkan transaksi BRILink Tarik Tunai sebesar Rp' . number_format($nominalTarik, 0, ',', '.') . ' dengan biaya admin Rp' . number_format($adminFee, 0, ',', '.'), $transaksi->toArray());
+
+        return response()->json($transaksi, 201);
     }
 
     public function show($id)
@@ -44,7 +57,18 @@ class TarikTunaiController extends Controller
     public function update(Request $request, $id)
     {
         $t = TransaksiTarikTunai::findOrFail($id);
-        $t->update($request->all());
+        $data = $request->validate([
+            'nomor_rekening' => 'required',
+            'nama_penerima' => 'required',
+            'nomor_hp' => 'required',
+            'jenis_nasabah' => 'required|in:internal,eksternal',
+            'nominal_tarik' => 'required|numeric|min:1',
+            'status' => 'nullable|in:sukses,gagal',
+        ]);
+
+        $data = BrilinkFeeService::withNasabahFee($data, 'tarik_tunai', 'nominal_tarik');
+
+        $t->update($data);
         return response()->json($t);
     }
 

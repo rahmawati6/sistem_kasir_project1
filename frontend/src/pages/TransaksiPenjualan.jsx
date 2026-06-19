@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, Plus, Trash2, Minus, ShoppingCart, Banknote, QrCode, Camera, ScanLine, X, CheckCircle2, ReceiptText, Printer, Barcode } from 'lucide-react'
+import { Search, ShoppingCart, Camera, Barcode } from 'lucide-react'
 import { formatRupiah } from '../utils/formatRupiah'
-import api from '../services/api'
-import Modal from '../components/Common/Modal'
+import { parseNominalInput } from '../utils/nominalInput'
+import { playScanBeep } from '../utils/audioFeedback'
+import api, { getApiErrorMessage } from '../services/api'
+import SalesCartPanel from '../components/Sales/SalesCartPanel'
+import SalesPaymentModal from '../components/Sales/SalesPaymentModal'
+import SalesReceiptModal from '../components/Sales/SalesReceiptModal'
+import SalesScannerModals from '../components/Sales/SalesScannerModals'
 import toast from 'react-hot-toast'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 
 export default function TransaksiPenjualan() {
   const [cart, setCart] = useState([])
@@ -14,8 +20,10 @@ export default function TransaksiPenjualan() {
   const [uangBayar, setUangBayar] = useState('')
   const [loading, setLoading] = useState(false)
   const [qrisLoading, setQrisLoading] = useState(false)
+  const [qrisChecking, setQrisChecking] = useState(false)
   const [qrisData, setQrisData] = useState(null)
   const [qrisError, setQrisError] = useState('')
+  const [qrisStatus, setQrisStatus] = useState('')
   const [scannerOpen, setScannerOpen] = useState(false)
   const [usbScannerOpen, setUsbScannerOpen] = useState(false)
   const [scannerError, setScannerError] = useState('')
@@ -26,24 +34,37 @@ export default function TransaksiPenjualan() {
   const streamRef = useRef(null)
   const scanLoopRef = useRef(null)
   const lastScanRef = useRef('')
+  const scannerControlsRef = useRef(null)
 
   useEffect(() => { fetchProducts() }, [])
 
   useEffect(() => {
     if (scannerOpen) startScanner()
     return stopScanner
-  }, [scannerOpen, products])
+  }, [scannerOpen])
 
   useEffect(() => {
     document.body.classList.toggle('receipt-print-mode', Boolean(showReceipt && lastReceipt))
     return () => document.body.classList.remove('receipt-print-mode')
   }, [showReceipt, lastReceipt])
 
+  useEffect(() => {
+    if (paymentMethod !== 'qris' || !qrisData?.order_id || ['settlement', 'capture'].includes(qrisStatus)) return
+
+    const interval = window.setInterval(() => {
+      checkMidtransQrisStatus(false)
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [paymentMethod, qrisData?.order_id, qrisStatus])
+
   const fetchProducts = async () => {
     try {
       const res = await api.get('/barang')
       setProducts(res.data)
-    } catch (e) {}
+    } catch (e) {
+      toast.error(getApiErrorMessage(e, 'Gagal memuat produk'))
+    }
   }
 
   const addToCart = (p) => {
@@ -64,6 +85,7 @@ export default function TransaksiPenjualan() {
     const product = products.find(p => String(p.kode_barang).toLowerCase() === cleanCode)
     if (!product) return toast.error(`Produk ${code} tidak ditemukan`)
     addToCart(product)
+    playScanBeep()
     toast.success(`${product.nama_barang} masuk keranjang`)
   }
 
@@ -76,23 +98,30 @@ export default function TransaksiPenjualan() {
 
   const removeFromCart = (id) => setCart(cart.filter(i => i.id !== id))
   const totalHarga = cart.reduce((sum, item) => sum + (Number(item.harga_jual) * item.jumlah), 0)
-  const kembalian = uangBayar ? Number(uangBayar) - totalHarga : 0
+  const uangBayarValue = parseNominalInput(uangBayar)
+  const kembalian = uangBayar ? uangBayarValue - totalHarga : 0
 
-  const formatReceiptDate = (value) => {
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }).format(new Date(value)).replace(/\./g, ':')
+  const copyQrisUrl = async () => {
+    if (!qrisData?.qris_url) return toast.error('QRIS belum dibuat')
+    try {
+      await navigator.clipboard.writeText(qrisData.qris_url)
+      toast.success('URL QRIS disalin')
+    } catch (e) {
+      toast.error('Gagal menyalin URL QRIS')
+    }
   }
 
-  const printReceipt = () => {
-    window.setTimeout(() => window.print(), 80)
+  const openMidtransSimulator = () => {
+    window.location.assign('https://simulator.sandbox.midtrans.com/')
+  }
+
+  const closePaymentModal = () => {
+    setShowPayment(false)
+    setPaymentMethod('tunai')
+    setUangBayar('')
+    setQrisData(null)
+    setQrisStatus('')
+    setQrisError('')
   }
 
   const createMidtransQris = async () => {
@@ -100,6 +129,7 @@ export default function TransaksiPenjualan() {
     setQrisLoading(true)
     setQrisError('')
     setQrisData(null)
+    setQrisStatus('')
     try {
       const res = await api.post('/penjualan/qris', {
         items: cart.map(i => ({
@@ -111,11 +141,55 @@ export default function TransaksiPenjualan() {
         }))
       })
       setQrisData(res.data)
+      setQrisStatus(res.data?.status || 'pending')
     } catch (e) {
-      setQrisError(e.response?.data?.message || 'Gagal membuat QRIS Midtrans')
+      setQrisError(getApiErrorMessage(e, 'Gagal membuat QRIS Midtrans'))
     } finally {
       setQrisLoading(false)
     }
+  }
+
+  const checkMidtransQrisStatus = async (showMessage = true) => {
+    if (!qrisData?.order_id) {
+      if (showMessage) toast.error('Buat QRIS Midtrans dulu')
+      return ''
+    }
+
+    setQrisChecking(true)
+    setQrisError('')
+    try {
+      const res = await api.post('/penjualan/qris/status', { order_id: qrisData.order_id })
+      const latestStatus = res.data?.status || 'unknown'
+      setQrisStatus(latestStatus)
+      if (showMessage) {
+        if (['settlement', 'capture'].includes(latestStatus)) {
+          toast.success('Pembayaran QRIS sudah diterima')
+        } else {
+          toast(`Status QRIS: ${formatQrisStatus(latestStatus)}`)
+        }
+      }
+      return latestStatus
+    } catch (e) {
+      setQrisError(getApiErrorMessage(e, 'Gagal mengecek status pembayaran Midtrans'))
+      return ''
+    } finally {
+      setQrisChecking(false)
+    }
+  }
+
+  const formatQrisStatus = (status) => {
+    const labels = {
+      pending: 'Menunggu pembayaran',
+      settlement: 'Berhasil dibayar',
+      capture: 'Berhasil dibayar',
+      expire: 'Kedaluwarsa',
+      cancel: 'Dibatalkan',
+      deny: 'Ditolak',
+      failure: 'Gagal',
+      unknown: 'Belum diketahui'
+    }
+
+    return labels[status] || status || 'Menunggu pembayaran'
   }
 
   const playPaymentSuccessSound = () => {
@@ -137,9 +211,31 @@ export default function TransaksiPenjualan() {
     })
   }
 
+  const speakQrisPaymentSuccess = (amount) => {
+    if (!('speechSynthesis' in window)) return
+    const nominalText = new Intl.NumberFormat('id-ID').format(Number(amount || 0))
+    const utterance = new SpeechSynthesisUtterance(`Pembayaran ${nominalText} rupiah berhasil diterima`)
+    utterance.lang = 'id-ID'
+    utterance.rate = 0.95
+    utterance.pitch = 1
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+  }
+
   const handleCheckout = async (method = paymentMethod) => {
     if (cart.length === 0) return toast.error('Keranjang kosong')
-    if (method === 'tunai' && Number(uangBayar) < totalHarga) return toast.error('Uang bayar kurang')
+    if (method === 'tunai' && uangBayarValue < totalHarga) return toast.error('Uang bayar kurang')
+    if (method === 'qris' && qrisData?.order_id && !['settlement', 'capture'].includes(qrisStatus)) {
+      const latestStatus = await checkMidtransQrisStatus(false)
+      if (!['settlement', 'capture'].includes(latestStatus)) {
+        return toast.error('Pembayaran QRIS belum berhasil. Bayar lewat simulator Midtrans dulu, lalu cek status.')
+      }
+    }
+    if (method === 'qris' && !qrisData?.order_id) {
+      return toast.error('Buat QRIS Midtrans dulu sebelum konfirmasi')
+    }
+    const stockProblem = cart.find(item => item.jumlah > Number(item.stok))
+    if (stockProblem) return toast.error(`Stok ${stockProblem.nama_barang} tidak cukup`)
 
     const receiptItems = cart.map(i => ({
       id: i.id,
@@ -149,16 +245,20 @@ export default function TransaksiPenjualan() {
       jumlah: i.jumlah
     }))
     const receiptTotal = totalHarga
-    const receiptPaid = method === 'tunai' ? Number(uangBayar) : receiptTotal
+    const receiptPaid = method === 'tunai' ? uangBayarValue : receiptTotal
 
     setLoading(true)
     try {
       const res = await api.post('/penjualan', {
         items: receiptItems,
         metode_pembayaran: method,
-        uang_bayar: method === 'tunai' ? receiptPaid : null
+        uang_bayar: method === 'tunai' ? receiptPaid : null,
+        qris_order_id: method === 'qris' ? qrisData?.order_id : null
       })
-      if (method === 'qris') playPaymentSuccessSound()
+      if (method === 'qris') {
+        playPaymentSuccessSound()
+        speakQrisPaymentSuccess(receiptTotal)
+      }
       toast.success(`Pembayaran ${method.toUpperCase()} berhasil: ${res.data.transaksi.kode_transaksi}`)
       setLastReceipt({
         kode_transaksi: res.data?.transaksi?.kode_transaksi || `TRX-${Date.now()}`,
@@ -171,12 +271,10 @@ export default function TransaksiPenjualan() {
       })
       setShowReceipt(true)
       setCart([])
-      setUangBayar('')
-      setPaymentMethod('tunai')
-      setShowPayment(false)
+      closePaymentModal()
       fetchProducts()
     } catch (e) {
-      toast.error('Gagal: ' + (e.response?.data?.message || e.message))
+      toast.error(getApiErrorMessage(e, 'Gagal menyimpan transaksi penjualan'))
     } finally {
       setLoading(false)
     }
@@ -184,52 +282,84 @@ export default function TransaksiPenjualan() {
 
   const startScanner = async () => {
     setScannerError('')
+    stopScanner()
     if (!navigator.mediaDevices?.getUserMedia) {
-      setScannerError('Kamera tidak tersedia di browser ini. Gunakan input barcode manual.')
+      setScannerError('Kamera tidak tersedia di browser ini. Gunakan HTTPS/ngrok atau input barcode manual.')
       return
     }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
+      const reader = new BrowserMultiFormatReader()
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       }
-      runBarcodeDetector()
+      const controls = await reader.decodeFromConstraints(constraints, videoRef.current, (result, error, controls) => {
+        const code = result?.getText?.()?.trim()
+        if (code && code !== lastScanRef.current) {
+          lastScanRef.current = code
+          addByCode(code)
+          controls.stop()
+          scannerControlsRef.current = null
+          setScannerOpen(false)
+        }
+      })
+      scannerControlsRef.current = controls
     } catch (e) {
-      setScannerError('Izin kamera ditolak atau kamera tidak ditemukan. Gunakan input manual.')
+      runBarcodeDetector()
     }
   }
 
   const stopScanner = () => {
     if (scanLoopRef.current) cancelAnimationFrame(scanLoopRef.current)
+    scannerControlsRef.current?.stop?.()
+    scannerControlsRef.current = null
     streamRef.current?.getTracks().forEach(track => track.stop())
     streamRef.current = null
     scanLoopRef.current = null
     lastScanRef.current = ''
+    if (videoRef.current) videoRef.current.srcObject = null
   }
 
   const runBarcodeDetector = async () => {
     if (!('BarcodeDetector' in window)) {
-      setScannerError('Barcode scanner otomatis belum didukung browser ini. Gunakan input manual.')
+      setScannerError('Kamera tidak bisa membaca otomatis di browser ini. Pastikan memakai HTTPS/ngrok, izinkan kamera, atau gunakan input manual.')
       return
     }
-    const detector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code'] })
-    const scan = async () => {
-      if (!scannerOpen || !videoRef.current) return
-      try {
-        const results = await detector.detect(videoRef.current)
-        const code = results?.[0]?.rawValue
-        if (code && code !== lastScanRef.current) {
-          lastScanRef.current = code
-          addByCode(code)
-          setScannerOpen(false)
-          return
-        }
-      } catch (e) {}
-      scanLoopRef.current = requestAnimationFrame(scan)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+
+      const detector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code'] })
+      const scan = async () => {
+        if (!scannerOpen || !videoRef.current) return
+        try {
+          const results = await detector.detect(videoRef.current)
+          const code = results?.[0]?.rawValue?.trim()
+          if (code && code !== lastScanRef.current) {
+            lastScanRef.current = code
+            addByCode(code)
+            setScannerOpen(false)
+            return
+          }
+        } catch (e) {}
+        scanLoopRef.current = requestAnimationFrame(scan)
+      }
+      scan()
+    } catch (e) {
+      setScannerError('Izin kamera ditolak atau kamera tidak ditemukan. Buka lewat HTTPS/ngrok lalu izinkan kamera.')
     }
-    scan()
   }
 
   const filteredProducts = products.filter(p =>
@@ -284,234 +414,58 @@ export default function TransaksiPenjualan() {
           </div>
         </section>
 
-        <aside className="cart-panel">
-          <div className="cart-header">
-            <div>
-              <span>Keranjang</span>
-              <h2>{totalItems} item</h2>
-            </div>
-            <ShoppingCart size={23} />
-          </div>
-
-          <div className="cart-list">
-            {cart.length === 0 ? (
-              <div className="cart-empty">
-                <ShoppingCart size={42} />
-                <p>Keranjang kosong</p>
-                <span>Pilih produk atau scan barcode untuk mulai.</span>
-              </div>
-            ) : cart.map(item => (
-              <div key={item.id} className="cart-item">
-                <div className="cart-item-main">
-                  <strong>{item.nama_barang}</strong>
-                  <span>{formatRupiah(item.harga_jual)} x {item.jumlah}</span>
-                </div>
-                <div className="qty-control">
-                  <button onClick={() => updateQty(item.id, item.jumlah - 1)}><Minus size={16} /></button>
-                  <span>{item.jumlah}</span>
-                  <button onClick={() => updateQty(item.id, item.jumlah + 1)}><Plus size={16} /></button>
-                </div>
-                <strong className="cart-subtotal">{formatRupiah(Number(item.harga_jual) * item.jumlah)}</strong>
-                <button onClick={() => removeFromCart(item.id)} className="remove-cart"><Trash2 size={17} /></button>
-              </div>
-            ))}
-          </div>
-
-          <div className="cart-footer">
-            <div className="cart-total">
-              <span>Total Bayar</span>
-              <strong>{formatRupiah(totalHarga)}</strong>
-            </div>
-            <button onClick={() => setShowPayment(true)} disabled={cart.length === 0} className="checkout-button">
-              <ReceiptText size={19} />
-              <span>Lanjut Pembayaran</span>
-            </button>
-          </div>
-        </aside>
+        <SalesCartPanel
+          cart={cart}
+          totalHarga={totalHarga}
+          totalItems={totalItems}
+          onCheckout={() => setShowPayment(true)}
+          onRemove={removeFromCart}
+          onUpdateQty={updateQty}
+        />
       </div>
 
-      {scannerOpen && (
-        <div className="scanner-root">
-          <div className="scanner-card">
-            <div className="scanner-header">
-              <div>
-                <h2>Scan Barcode Produk</h2>
-                <p>Arahkan kamera ke barcode atau QR kode produk.</p>
-              </div>
-              <button onClick={() => setScannerOpen(false)} aria-label="Tutup scanner"><X size={20} /></button>
-            </div>
-            <div className="camera-frame">
-              <video ref={videoRef} playsInline muted></video>
-              <div className="scan-line"><ScanLine size={34} /></div>
-            </div>
-            {scannerError && <div className="scanner-warning">{scannerError}</div>}
-            <form onSubmit={(e) => { e.preventDefault(); addByCode(manualBarcode); setManualBarcode('') }} className="manual-barcode">
-              <input value={manualBarcode} onChange={e => setManualBarcode(e.target.value)} placeholder="Ketik kode barang manual, contoh HP001" />
-              <button type="submit">Tambah</button>
-            </form>
-          </div>
-        </div>
-      )}
+      <SalesScannerModals
+        scannerOpen={scannerOpen}
+        usbScannerOpen={usbScannerOpen}
+        scannerError={scannerError}
+        manualBarcode={manualBarcode}
+        onManualBarcodeChange={setManualBarcode}
+        onSubmitBarcode={addByCode}
+        onCloseScanner={() => setScannerOpen(false)}
+        onCloseUsbScanner={() => setUsbScannerOpen(false)}
+        videoRef={videoRef}
+      />
 
-      {usbScannerOpen && (
-        <div className="scanner-root">
-          <div className="scanner-card usb-scanner-card">
-            <div className="scanner-header">
-              <div>
-                <h2>Scanner Barcode USB</h2>
-                <p>Colok alat scanner, klik input di bawah, lalu scan barcode produk. Biasanya alat akan mengetik kode otomatis dan menekan Enter.</p>
-              </div>
-              <button onClick={() => setUsbScannerOpen(false)} aria-label="Tutup scanner USB"><X size={20} /></button>
-            </div>
-            <form onSubmit={(e) => { e.preventDefault(); addByCode(manualBarcode); setManualBarcode('') }} className="usb-scanner-form">
-              <label className="field-group">
-                <span>Kode dari Scanner USB</span>
-                <input autoFocus value={manualBarcode} onChange={e => setManualBarcode(e.target.value)} placeholder="Scan barcode dengan alat USB..." />
-              </label>
-              <button type="submit">
-                <Barcode size={18} />
-                <span>Tambah ke Keranjang</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <SalesPaymentModal
+        isOpen={showPayment}
+        onClose={closePaymentModal}
+        totalHarga={totalHarga}
+        totalItems={totalItems}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
+        uangBayar={uangBayar}
+        onUangBayarChange={setUangBayar}
+        uangBayarValue={uangBayarValue}
+        kembalian={kembalian}
+        loading={loading}
+        onCheckout={handleCheckout}
+        qrisData={qrisData}
+        qrisLoading={qrisLoading}
+        qrisChecking={qrisChecking}
+        qrisError={qrisError}
+        qrisStatus={qrisStatus}
+        onCreateQris={createMidtransQris}
+        onCopyQrisUrl={copyQrisUrl}
+        onOpenSimulator={openMidtransSimulator}
+        onCheckQrisStatus={checkMidtransQrisStatus}
+        formatQrisStatus={formatQrisStatus}
+      />
 
-      <Modal isOpen={showPayment} onClose={() => setShowPayment(false)} title="Pembayaran" size="lg">
-        <div className="payment-layout">
-          <div className="payment-summary">
-            <span>Total Belanja</span>
-            <strong>{formatRupiah(totalHarga)}</strong>
-            <p>{totalItems} item dalam keranjang</p>
-          </div>
-
-          <div className="payment-methods">
-            <button onClick={() => setPaymentMethod('tunai')} className={paymentMethod === 'tunai' ? 'active' : ''}>
-              <Banknote size={20} />
-              <span>Tunai</span>
-            </button>
-            <button onClick={() => { setPaymentMethod('qris'); createMidtransQris() }} className={paymentMethod === 'qris' ? 'active' : ''}>
-              <QrCode size={20} />
-              <span>QRIS</span>
-            </button>
-          </div>
-
-          {paymentMethod === 'tunai' ? (
-            <div className="cash-payment">
-              <label className="field-group">
-                <span>Uang Bayar</span>
-                <input type="number" value={uangBayar} onChange={e => setUangBayar(e.target.value)} placeholder="0" autoFocus />
-              </label>
-              <div className="quick-cash">
-                {[50000, 100000, 200000, 500000].map(value => (
-                  <button key={value} onClick={() => setUangBayar(value.toString())}>{formatRupiah(value)}</button>
-                ))}
-              </div>
-              <div className={`change-box ${kembalian >= 0 && uangBayar ? 'ready' : ''}`}>
-                <span>Kembalian</span>
-                <strong>{uangBayar ? formatRupiah(Math.max(kembalian, 0)) : 'Rp 0'}</strong>
-              </div>
-              <button onClick={() => handleCheckout('tunai')} disabled={loading || !uangBayar || Number(uangBayar) < totalHarga} className="confirm-payment-button">
-                {loading ? 'Memproses...' : 'Konfirmasi Tunai'}
-              </button>
-            </div>
-          ) : (
-            <div className="qris-payment">
-              <div className="qris-box">
-                {qrisData?.qris_url ? (
-                  <img src={qrisData.qris_url} alt="QRIS Midtrans" className="midtrans-qris-image" />
-                ) : (
-                  <div className="fake-qris">
-                    <span></span><span></span><span></span><span></span>
-                  </div>
-                )}
-                <div>
-                  <h3>{qrisData?.order_id ? 'Midtrans QRIS Sandbox' : 'Sultan Cell QRIS'}</h3>
-                  <p>{qrisData?.order_id ? `Order ID: ${qrisData.order_id}` : 'Scan QRIS ini dari aplikasi pembayaran pelanggan, lalu konfirmasi jika pembayaran sudah masuk.'}</p>
-                </div>
-              </div>
-              {qrisLoading && <div className="qris-status"><QrCode size={20} /><span>Membuat QRIS Midtrans...</span></div>}
-              {qrisError && <div className="scanner-warning">{qrisError}</div>}
-              <div className="qris-status">
-                <CheckCircle2 size={20} />
-                <span>Suara sukses akan diputar setelah pembayaran QRIS dikonfirmasi.</span>
-              </div>
-              <button type="button" onClick={createMidtransQris} disabled={qrisLoading} className="secondary-button">
-                {qrisLoading ? 'Memuat QRIS...' : 'Buat Ulang QRIS Midtrans'}
-              </button>
-              <button onClick={() => handleCheckout('qris')} disabled={loading} className="confirm-payment-button qris">
-                {loading ? 'Memproses...' : 'Konfirmasi QRIS Sudah Dibayar'}
-              </button>
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      <Modal isOpen={showReceipt} onClose={() => setShowReceipt(false)} title="Struk Pembayaran" size="sm">
-        {lastReceipt && (
-          <div className="receipt-preview">
-            <div className="receipt-print-area">
-              <div className="receipt-store">
-                <strong>SULTAN CELL</strong>
-                <span>Konter HP & Agen BRILink</span>
-                <span>Kasir, stok barang, dan layanan BRILink</span>
-              </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-meta">
-                <div><span>No</span><strong>{lastReceipt.kode_transaksi}</strong></div>
-                <div><span>Waktu</span><strong>{formatReceiptDate(lastReceipt.waktu)}</strong></div>
-                <div><span>Kasir</span><strong>Admin</strong></div>
-                <div><span>Bayar</span><strong>{lastReceipt.metode_pembayaran.toUpperCase()}</strong></div>
-              </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-items">
-                {lastReceipt.items.map(item => (
-                  <div key={`${item.id}-${item.kode_barang}`} className="receipt-item">
-                    <div>
-                      <strong>{item.nama_barang}</strong>
-                      <span>{item.kode_barang}</span>
-                    </div>
-                    <p>{item.jumlah} x {formatRupiah(item.harga_jual)}</p>
-                    <b>{formatRupiah(item.harga_jual * item.jumlah)}</b>
-                  </div>
-                ))}
-              </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-total-row">
-                <span>Total</span>
-                <strong>{formatRupiah(lastReceipt.total)}</strong>
-              </div>
-              <div className="receipt-total-row">
-                <span>Bayar</span>
-                <strong>{formatRupiah(lastReceipt.uang_bayar)}</strong>
-              </div>
-              <div className="receipt-total-row">
-                <span>Kembali</span>
-                <strong>{formatRupiah(lastReceipt.kembalian)}</strong>
-              </div>
-
-              <div className="receipt-footer">
-                <p>Terima kasih sudah berbelanja</p>
-                <span>Barang yang sudah dibeli harap dicek kembali.</span>
-              </div>
-            </div>
-
-            <div className="receipt-actions no-print">
-              <button type="button" className="secondary-button" onClick={() => setShowReceipt(false)}>Tutup</button>
-              <button type="button" className="print-receipt-button" onClick={printReceipt}>
-                <Printer size={18} />
-                <span>Cetak Struk</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <SalesReceiptModal
+        isOpen={showReceipt}
+        receipt={lastReceipt}
+        onClose={() => setShowReceipt(false)}
+      />
     </div>
   )
 }

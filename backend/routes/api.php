@@ -9,15 +9,20 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\TarikTunaiController;
 use App\Http\Controllers\SetorTunaiController;
-use App\Http\Controllers\TabunganCustomerController;
 use App\Http\Controllers\TagihanController;
 use App\Http\Controllers\PulsaController;
 use App\Http\Controllers\BrilinkController;
 use App\Http\Controllers\BiayaAdminController;
+use App\Http\Controllers\EwalletController;
+use App\Http\Controllers\BackupController;
+use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\PengeluaranTokoController;
+use App\Http\Controllers\ReturSupplierController;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/midtrans/notification', [PenjualanController::class, 'qrisWebhook']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -29,30 +34,42 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Barang
     Route::apiResource('barang', BarangController::class);
+    Route::post('/barang/import', [BarangController::class, 'import']);
     Route::get('/barang-search', [BarangController::class, 'search']);
 
     // Penjualan
     Route::get('/penjualan', [PenjualanController::class, 'index']);
     Route::post('/penjualan', [PenjualanController::class, 'store']);
     Route::post('/penjualan/qris', [PenjualanController::class, 'qris']);
+    Route::post('/penjualan/qris/status', [PenjualanController::class, 'qrisStatus']);
+    Route::post('/penjualan/{id}/cancel', [PenjualanController::class, 'cancel']);
+    Route::post('/penjualan/{id}/retur', [PenjualanController::class, 'retur']);
     Route::get('/penjualan/invoice/{id}', [PenjualanController::class, 'invoice']);
 
     // Laporan
     Route::get('/laporan/penjualan', [LaporanController::class, 'penjualan']);
+    Route::get('/laporan/retur-pelanggan', [LaporanController::class, 'returPelanggan']);
     Route::delete('/laporan/penjualan/reset', [LaporanController::class, 'resetPenjualan']);
 
     // BRILink
     Route::apiResource('transfer', TransferController::class);
     Route::apiResource('tarik-tunai', TarikTunaiController::class);
     Route::apiResource('setor-tunai', SetorTunaiController::class);
-    Route::apiResource('tabungan', TabunganCustomerController::class);
     Route::apiResource('tagihan', TagihanController::class);
     Route::apiResource('pulsa', PulsaController::class);
+    Route::apiResource('ewallet', EwalletController::class);
 
     // Riwayat BRILink
     Route::get('/riwayat-brilink', [BrilinkController::class, 'riwayat']);
 
+    // Stok, backup, aktivitas
+    Route::get('/backup-data', [BackupController::class, 'download']);
+    Route::post('/backup-data/restore', [BackupController::class, 'restore']);
+    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+    Route::apiResource('pengeluaran-toko', PengeluaranTokoController::class)->only(['index', 'store', 'destroy']);
+    Route::apiResource('retur-supplier', ReturSupplierController::class);
+
     // Biaya Admin
     Route::get('/biaya-admin', [BiayaAdminController::class, 'index']);
-    Route::put('/biaya-admin/{layanan}', [BiayaAdminController::class, 'update']);
+    Route::put('/biaya-admin/{jenisTransaksi}', [BiayaAdminController::class, 'update']);
 });

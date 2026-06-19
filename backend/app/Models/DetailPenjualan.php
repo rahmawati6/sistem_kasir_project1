@@ -9,7 +9,7 @@ class DetailPenjualan extends Model
     protected $table = 'detail_penjualan';
     protected $fillable = [
         'transaksi_penjualan_id', 'barang_id', 'kode_barang',
-        'nama_barang', 'jumlah', 'harga_satuan', 'subtotal'
+        'nama_barang', 'jumlah', 'harga_satuan', 'harga_beli_satuan', 'subtotal'
     ];
 
     public function transaksi()

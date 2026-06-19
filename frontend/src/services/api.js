@@ -1,9 +1,21 @@
 import axios from 'axios'
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
 })
+
+export const getApiErrorMessage = (error, fallback = 'Terjadi kesalahan. Coba lagi.') => {
+  if (!error.response) {
+    return 'Tidak bisa terhubung ke backend. Pastikan server Laravel sedang berjalan.'
+  }
+
+  const data = error.response.data || {}
+  const firstError = data.errors ? Object.values(data.errors).flat()[0] : null
+  return firstError || data.message || fallback
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -18,7 +30,7 @@ api.interceptors.response.use(
     const isAuthRequest = requestUrl.includes('/login') || requestUrl.includes('/reset-password')
     if (error.response && error.response.status === 401 && !isAuthRequest) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      window.dispatchEvent(new Event('auth-token-changed'))
     }
     return Promise.reject(error)
   }

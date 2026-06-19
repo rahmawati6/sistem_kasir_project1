@@ -9,7 +9,8 @@ class TransaksiPenjualan extends Model
     protected $table = 'transaksi_penjualan';
     protected $fillable = [
         'kode_transaksi', 'tanggal', 'metode_pembayaran', 'status',
-        'total_harga', 'uang_bayar', 'kembalian', 'kasir'
+        'total_harga', 'uang_bayar', 'kembalian', 'kasir',
+        'alasan_batal', 'dibatalkan_pada'
     ];
 
     protected $casts = [

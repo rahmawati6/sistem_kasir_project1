@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class BiayaAdmin extends Model
 {
     protected $table = 'biaya_admin';
-    protected $fillable = ['layanan', 'jenis_biaya', 'nilai', 'aturan_range', 'is_active'];
+    protected $fillable = ['layanan', 'jenis_nasabah', 'jenis_biaya', 'nilai', 'aturan_range', 'is_active'];
 
     protected $casts = [
         'aturan_range' => 'array',
@@ -35,12 +35,54 @@ class BiayaAdmin extends Model
 
     public static function defaultRange(): array
     {
+        return self::rangeNasabahInternal();
+    }
+
+    public static function jenisKartuNasabah(string $jenisNasabah): string
+    {
+        return $jenisNasabah === 'eksternal' ? 'Kartu Konter' : 'Kartu Nasabah';
+    }
+
+    public static function hitungNasabah(string $jenisNasabah, float $nominal): float
+    {
+        $jenisNasabah = $jenisNasabah === 'eksternal' ? 'eksternal' : 'internal';
+        $biaya = self::query()
+            ->where('layanan', 'brilink')
+            ->where('jenis_nasabah', $jenisNasabah)
+            ->where('is_active', true)
+            ->first();
+
+        $ranges = $biaya?->aturan_range ?: self::rangeNasabah($jenisNasabah);
+
+        return self::hitungRange($nominal, $ranges, 0);
+    }
+
+    public static function rangeNasabah(string $jenisNasabah): array
+    {
+        return $jenisNasabah === 'eksternal'
+            ? self::rangeNasabahEksternal()
+            : self::rangeNasabahInternal();
+    }
+
+    public static function rangeNasabahInternal(): array
+    {
         return [
             ['min' => 1, 'max' => 100000, 'biaya' => 2000],
             ['min' => 100001, 'max' => 500000, 'biaya' => 5000],
             ['min' => 500001, 'max' => 1000000, 'biaya' => 10000],
             ['min' => 1000001, 'max' => 2000000, 'biaya' => 15000],
             ['min' => 2000001, 'max' => null, 'biaya' => 20000],
+        ];
+    }
+
+    public static function rangeNasabahEksternal(): array
+    {
+        return [
+            ['min' => 1, 'max' => 100000, 'biaya' => 5000],
+            ['min' => 100001, 'max' => 500000, 'biaya' => 8000],
+            ['min' => 500001, 'max' => 1000000, 'biaya' => 12000],
+            ['min' => 1000001, 'max' => 2000000, 'biaya' => 18000],
+            ['min' => 2000001, 'max' => null, 'biaya' => 25000],
         ];
     }
 

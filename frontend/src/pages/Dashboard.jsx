@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react'
-import { TrendingUp, Activity, DollarSign, AlertTriangle, Clock, ArrowUpRight } from 'lucide-react'
+import { TrendingUp, Activity, DollarSign, AlertTriangle, Clock, ArrowUpRight, Trophy } from 'lucide-react'
 import { formatRupiah } from '../utils/formatRupiah'
-import api from '../services/api'
+import api, { getApiErrorMessage } from '../services/api'
+import toast from 'react-hot-toast'
 
 export default function Dashboard() {
-  const [data, setData] = useState({ total_penjualan_hari_ini: 0, total_transaksi_brilink: 0, total_keuntungan_admin: 0, stok_menipis: [], transaksi_terbaru: [] })
+  const [data, setData] = useState({
+    total_penjualan_hari_ini: 0,
+    total_transaksi_brilink: 0,
+    total_keuntungan_admin: 0,
+    stok_menipis: [],
+    transaksi_terbaru: [],
+    produk_terlaris: [],
+    aktivitas_terbaru: []
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchDashboard() }, [])
   const fetchDashboard = async () => {
-    try { const res = await api.get('/dashboard'); setData(res.data) } catch (e) { console.error(e) } finally { setLoading(false) }
+    try { const res = await api.get('/dashboard'); setData(res.data) } catch (e) { toast.error(getApiErrorMessage(e, 'Gagal memuat dashboard')) } finally { setLoading(false) }
   }
 
   const cards = [
@@ -82,6 +91,44 @@ export default function Dashboard() {
                   <span><em className={t.status === 'lunas' ? 'paid' : 'pending'}>{t.status}</em>{t.metode_pembayaran}</span>
                 </div>
                 <strong>{formatRupiah(t.total_harga)}</strong>
+              </div>
+            ))}</div>
+          )}
+        </section>
+      </div>
+
+      <div className="dashboard-panels">
+        <section className="dashboard-panel">
+          <div className="panel-title">
+            <div className="panel-icon info"><Trophy size={20} /></div>
+            <div>
+              <h2>Produk Terlaris Hari Ini</h2>
+              <p>Produk dengan jumlah penjualan terbanyak.</p>
+            </div>
+          </div>
+          {data.produk_terlaris.length === 0 ? <div className="empty-state"><p>Belum ada produk terjual</p><span>Produk terlaris akan muncul setelah transaksi.</span></div> : (
+            <div className="list-stack">{data.produk_terlaris.map(item => (
+              <div key={item.kode_barang} className="inventory-row">
+                <div><p>{item.nama_barang}</p><span>{item.kode_barang}</span></div>
+                <strong>{item.total_jual} terjual</strong>
+              </div>
+            ))}</div>
+          )}
+        </section>
+
+        <section className="dashboard-panel">
+          <div className="panel-title">
+            <div className="panel-icon info"><Activity size={20} /></div>
+            <div>
+              <h2>Aktivitas Sistem Terbaru</h2>
+              <p>Audit singkat aktivitas penting di website.</p>
+            </div>
+          </div>
+          {data.aktivitas_terbaru.length === 0 ? <div className="empty-state"><p>Belum ada aktivitas</p><span>Aktivitas baru akan tampil setelah ada transaksi atau perubahan data.</span></div> : (
+            <div className="list-stack">{data.aktivitas_terbaru.map(item => (
+              <div key={item.id} className="transaction-row">
+                <div><p>{item.module} - {item.action}</p><span>{item.description}</span></div>
+                <strong>{new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</strong>
               </div>
             ))}</div>
           )}

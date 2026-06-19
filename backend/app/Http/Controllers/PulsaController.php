@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\TransaksiPulsa;
-use App\Models\BiayaAdmin;
+use App\Models\ActivityLog;
+use App\Services\BrilinkFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -17,25 +18,38 @@ class PulsaController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'operator' => 'required',
             'jenis_layanan' => 'required|in:pulsa,paket_data',
             'nomor_tujuan' => 'required',
             'produk' => 'required',
+            'jenis_nasabah' => 'required|in:internal,eksternal',
             'harga' => 'required|numeric|min:1',
+        ], [
+            'operator.required' => 'Operator wajib dipilih.',
+            'jenis_layanan.required' => 'Jenis layanan wajib dipilih.',
+            'jenis_layanan.in' => 'Jenis layanan tidak valid.',
+            'nomor_tujuan.required' => 'Nomor tujuan wajib diisi.',
+            'produk.required' => 'Nama produk pulsa/paket data wajib diisi.',
+            'jenis_nasabah.required' => 'Jenis nasabah wajib dipilih.',
+            'jenis_nasabah.in' => 'Jenis nasabah tidak valid.',
+            'harga.required' => 'Harga wajib diisi.',
+            'harga.numeric' => 'Harga harus berupa angka.',
+            'harga.min' => 'Harga minimal Rp 1.',
         ]);
 
-        $layanan = $request->jenis_layanan === 'pulsa' ? 'pulsa' : 'paket_data';
-        $adminFee = BiayaAdmin::hitung($layanan, (float) $request->harga, 1500);
+        $harga = (float) $data['harga'];
 
-        $data = $request->all();
         $data['kode_transaksi'] = 'PLS-' . date('Ymd') . '-' . strtoupper(Str::random(6));
         $data['tanggal'] = Carbon::today();
-        $data['biaya_admin'] = $adminFee;
-        $data['total_bayar'] = $request->harga + $adminFee;
+        $data = BrilinkFeeService::withNasabahFee($data, 'pulsa_paket_data', 'harga');
+        $adminFee = BrilinkFeeService::adminFeeFrom($data);
         $data['kasir'] = 'admin';
 
-        return response()->json(TransaksiPulsa::create($data), 201);
+        $transaksi = TransaksiPulsa::create($data);
+        ActivityLog::record('Pulsa', 'create', 'Admin menambahkan transaksi BRILink Pulsa/Paket Data sebesar Rp' . number_format($harga, 0, ',', '.') . ' dengan biaya admin Rp' . number_format($adminFee, 0, ',', '.'), $transaksi->toArray());
+
+        return response()->json($transaksi, 201);
     }
 
     public function show($id)
@@ -46,7 +60,19 @@ class PulsaController extends Controller
     public function update(Request $request, $id)
     {
         $p = TransaksiPulsa::findOrFail($id);
-        $p->update($request->all());
+        $data = $request->validate([
+            'operator' => 'required',
+            'jenis_layanan' => 'required|in:pulsa,paket_data',
+            'nomor_tujuan' => 'required',
+            'produk' => 'required',
+            'jenis_nasabah' => 'required|in:internal,eksternal',
+            'harga' => 'required|numeric|min:1',
+            'status' => 'nullable|in:sukses,gagal',
+        ]);
+
+        $data = BrilinkFeeService::withNasabahFee($data, 'pulsa_paket_data', 'harga');
+
+        $p->update($data);
         return response()->json($p);
     }
 

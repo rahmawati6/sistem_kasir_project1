@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\PembayaranTagihan;
-use App\Models\BiayaAdmin;
+use App\Models\ActivityLog;
+use App\Services\BrilinkFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -17,23 +18,36 @@ class TagihanController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'jenis_layanan' => 'required|in:pln,pdam,bpjs,indihome,angsuran,lainnya',
             'nomor_pelanggan' => 'required',
             'nama_pelanggan' => 'required',
+            'jenis_nasabah' => 'required|in:internal,eksternal',
             'jumlah_tagihan' => 'required|numeric|min:1',
+        ], [
+            'jenis_layanan.required' => 'Jenis tagihan wajib dipilih.',
+            'jenis_layanan.in' => 'Jenis tagihan tidak valid.',
+            'nomor_pelanggan.required' => 'Nomor pelanggan wajib diisi.',
+            'nama_pelanggan.required' => 'Nama pelanggan wajib diisi.',
+            'jenis_nasabah.required' => 'Jenis nasabah wajib dipilih.',
+            'jenis_nasabah.in' => 'Jenis nasabah tidak valid.',
+            'jumlah_tagihan.required' => 'Jumlah tagihan wajib diisi.',
+            'jumlah_tagihan.numeric' => 'Jumlah tagihan harus berupa angka.',
+            'jumlah_tagihan.min' => 'Jumlah tagihan minimal Rp 1.',
         ]);
 
-        $adminFee = BiayaAdmin::hitung('tagihan', (float) $request->jumlah_tagihan, 2500);
+        $jumlahTagihan = (float) $data['jumlah_tagihan'];
 
-        $data = $request->all();
         $data['kode_transaksi'] = 'TAG-' . date('Ymd') . '-' . strtoupper(Str::random(6));
         $data['tanggal'] = Carbon::today();
-        $data['biaya_admin'] = $adminFee;
-        $data['total_bayar'] = $request->jumlah_tagihan + $adminFee;
+        $data = BrilinkFeeService::withNasabahFee($data, 'tagihan', 'jumlah_tagihan');
+        $adminFee = BrilinkFeeService::adminFeeFrom($data);
         $data['kasir'] = 'admin';
 
-        return response()->json(PembayaranTagihan::create($data), 201);
+        $transaksi = PembayaranTagihan::create($data);
+        ActivityLog::record('Pembayaran Tagihan', 'create', 'Admin menambahkan transaksi BRILink Pembayaran Tagihan sebesar Rp' . number_format($jumlahTagihan, 0, ',', '.') . ' dengan biaya admin Rp' . number_format($adminFee, 0, ',', '.'), $transaksi->toArray());
+
+        return response()->json($transaksi, 201);
     }
 
     public function show($id)
@@ -44,7 +58,18 @@ class TagihanController extends Controller
     public function update(Request $request, $id)
     {
         $t = PembayaranTagihan::findOrFail($id);
-        $t->update($request->all());
+        $data = $request->validate([
+            'jenis_layanan' => 'required|in:pln,pdam,bpjs,indihome,angsuran,lainnya',
+            'nomor_pelanggan' => 'required',
+            'nama_pelanggan' => 'required',
+            'jenis_nasabah' => 'required|in:internal,eksternal',
+            'jumlah_tagihan' => 'required|numeric|min:1',
+            'status' => 'nullable|in:sukses,gagal',
+        ]);
+
+        $data = BrilinkFeeService::withNasabahFee($data, 'tagihan', 'jumlah_tagihan');
+
+        $t->update($data);
         return response()->json($t);
     }
 

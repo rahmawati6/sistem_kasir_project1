@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('kode_transaksi')->unique();
             $table->date('tanggal');
             $table->string('jenis_transfer');
+            $table->string('bank_tujuan')->nullable();
             $table->string('nomor_rekening_tujuan');
             $table->string('nama_penerima');
             $table->decimal('nominal_transfer', 15, 2);

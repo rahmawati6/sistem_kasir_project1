@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../services/api'
+import api, { getApiErrorMessage } from '../services/api'
+
+const notifyAuthChanged = () => window.dispatchEvent(new Event('auth-token-changed'))
 
 export function useAuth() {
   const [token, setToken] = useState(localStorage.getItem('token'))
@@ -9,6 +11,21 @@ export function useAuth() {
 
   useEffect(() => { if (token) fetchUser() }, [token])
 
+  useEffect(() => {
+    const syncToken = () => {
+      const nextToken = localStorage.getItem('token')
+      setToken(nextToken)
+      if (!nextToken) setUser(null)
+    }
+    window.addEventListener('auth-token-changed', syncToken)
+    window.addEventListener('storage', syncToken)
+
+    return () => {
+      window.removeEventListener('auth-token-changed', syncToken)
+      window.removeEventListener('storage', syncToken)
+    }
+  }, [])
+
   const fetchUser = async () => {
     try {
       const res = await api.get('/me')
@@ -16,6 +33,8 @@ export function useAuth() {
     } catch (e) {
       localStorage.removeItem('token')
       setToken(null)
+      setUser(null)
+      notifyAuthChanged()
     }
   }
 
@@ -25,10 +44,11 @@ export function useAuth() {
       localStorage.setItem('token', res.data.token)
       setToken(res.data.token)
       setUser(res.data.user)
+      notifyAuthChanged()
       navigate('/dashboard')
       return { success: true }
     } catch (e) {
-      return { success: false, message: e.response?.data?.message || 'Login gagal' }
+      return { success: false, message: getApiErrorMessage(e, 'Login gagal') }
     }
   }
 
@@ -37,6 +57,7 @@ export function useAuth() {
     localStorage.removeItem('token')
     setToken(null)
     setUser(null)
+    notifyAuthChanged()
     navigate('/login')
   }
 
