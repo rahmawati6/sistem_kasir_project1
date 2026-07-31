@@ -105,7 +105,7 @@ export default function PengeluaranToko() {
         <div className="brilink-table-header"><div><h2>Riwayat Pengeluaran</h2><p>{data.length} data ditampilkan</p></div></div>
         <div className="brilink-table-wrap">
           <table className="brilink-table">
-            <thead><tr><th>Tanggal</th><th>Kategori</th><th>Nama</th><th>Nominal</th><th>Keterangan</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Tanggal</th><th>Kategori</th><th>Nama</th><th className="money-header">Nominal</th><th>Keterangan</th><th>Aksi</th></tr></thead>
             <tbody>{data.map(item => (
               <tr key={item.id}>
                 <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>

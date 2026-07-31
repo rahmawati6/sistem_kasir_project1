@@ -9,6 +9,7 @@ const DataBarang = lazy(() => import('./pages/DataBarang'))
 const TransaksiPenjualan = lazy(() => import('./pages/TransaksiPenjualan'))
 const LaporanPenjualan = lazy(() => import('./pages/LaporanPenjualan'))
 const ReturSupplier = lazy(() => import('./pages/ReturSupplier'))
+const ReturBarangPelanggan = lazy(() => import('./pages/ReturBarangPelanggan'))
 const Transfer = lazy(() => import('./pages/Transfer'))
 const TarikTunai = lazy(() => import('./pages/TarikTunai'))
 const SetorTunai = lazy(() => import('./pages/SetorTunai'))
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="transaksi-penjualan" element={<TransaksiPenjualan />} />
           <Route path="laporan-penjualan" element={<LaporanPenjualan />} />
           <Route path="retur-supplier" element={<ReturSupplier />} />
+          <Route path="retur-barang-pelanggan" element={<ReturBarangPelanggan />} />
           <Route path="transfer" element={<Transfer />} />
           <Route path="tarik-tunai" element={<TarikTunai />} />
           <Route path="setor-tunai" element={<SetorTunai />} />

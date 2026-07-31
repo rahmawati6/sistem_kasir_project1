@@ -11,6 +11,7 @@ const menuItems = [
   { path: '/laporan-penjualan', icon: FileText, label: 'Laporan Penjualan' },
   { path: '/pengeluaran-toko', icon: ReceiptText, label: 'Pengeluaran Toko' },
   { path: '/retur-supplier', icon: RotateCcw, label: 'Retur Supplier' },
+  { path: '/retur-barang-pelanggan', icon: RotateCcw, label: 'Retur Barang Pelanggan' },
   { divider: true, label: 'LAYANAN BRILINK' },
   { path: '/transfer', icon: Send, label: 'Transfer' },
   { path: '/tarik-tunai', icon: Wallet, label: 'Tarik Tunai' },
@@ -43,7 +44,7 @@ export default function Sidebar({ isOpen, toggleSidebar, onLogout }) {
           {isOpen && (
             <div>
               <span>Sultan Cell</span>
-              <p>Agen BRILink</p>
+              <p>Admin Kasir</p>
             </div>
           )}
         </div>

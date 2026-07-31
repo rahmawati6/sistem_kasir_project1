@@ -1,0 +1,1 @@
+function e(e){return e==null?`Rp 0`:`Rp `+(typeof e==`string`?parseFloat(e):e).toLocaleString(`id-ID`)}export{e as t};

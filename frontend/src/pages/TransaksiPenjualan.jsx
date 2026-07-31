@@ -35,6 +35,7 @@ export default function TransaksiPenjualan() {
   const scanLoopRef = useRef(null)
   const lastScanRef = useRef('')
   const scannerControlsRef = useRef(null)
+  const qrisAutoCheckoutRef = useRef(false)
 
   useEffect(() => { fetchProducts() }, [])
 
@@ -57,6 +58,15 @@ export default function TransaksiPenjualan() {
 
     return () => window.clearInterval(interval)
   }, [paymentMethod, qrisData?.order_id, qrisStatus])
+
+  useEffect(() => {
+    if (paymentMethod !== 'qris') return
+    if (!qrisData?.order_id || !['settlement', 'capture'].includes(qrisStatus)) return
+    if (loading || qrisAutoCheckoutRef.current) return
+
+    qrisAutoCheckoutRef.current = true
+    handleCheckout('qris')
+  }, [paymentMethod, qrisData?.order_id, qrisStatus, loading])
 
   const fetchProducts = async () => {
     try {
@@ -122,6 +132,7 @@ export default function TransaksiPenjualan() {
     setQrisData(null)
     setQrisStatus('')
     setQrisError('')
+    qrisAutoCheckoutRef.current = false
   }
 
   const createMidtransQris = async () => {
@@ -130,6 +141,7 @@ export default function TransaksiPenjualan() {
     setQrisError('')
     setQrisData(null)
     setQrisStatus('')
+    qrisAutoCheckoutRef.current = false
     try {
       const res = await api.post('/penjualan/qris', {
         items: cart.map(i => ({
@@ -274,6 +286,7 @@ export default function TransaksiPenjualan() {
       closePaymentModal()
       fetchProducts()
     } catch (e) {
+      if (method === 'qris') qrisAutoCheckoutRef.current = false
       toast.error(getApiErrorMessage(e, 'Gagal menyimpan transaksi penjualan'))
     } finally {
       setLoading(false)

@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { FileText, CalendarDays, WalletCards, ReceiptText, TrendingUp, Printer, FileSpreadsheet, RotateCcw, Search, XCircle, Eye } from 'lucide-react'
 import { formatRupiah } from '../utils/formatRupiah'
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 import Modal from '../components/Common/Modal'
-import CustomerReturnModal from '../components/Sales/CustomerReturnModal'
 import Button from '../components/ui/Button'
 import Textarea from '../components/ui/Textarea'
-import sultanCellLogo from '../assets/sultan-cell-logo-round.png'
 
 const toInputDate = (date) => {
   const year = date.getFullYear()
@@ -18,10 +16,11 @@ const toInputDate = (date) => {
 
 export default function LaporanPenjualan() {
   const [data, setData] = useState({ transaksi: [], total_penjualan: 0, total_transaksi: 0, chart_data: [] })
+  const [customerReturns, setCustomerReturns] = useState([])
   const [startDate, setStartDate] = useState(toInputDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
   const [endDate, setEndDate] = useState(toInputDate(new Date()))
-  const [activeTab, setActiveTab] = useState('transaksi')
   const [loading, setLoading] = useState(false)
+  const [reportError, setReportError] = useState('')
   const [resetting, setResetting] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [reportPrintMode, setReportPrintMode] = useState(false)
@@ -29,25 +28,12 @@ export default function LaporanPenjualan() {
   const [paymentFilter, setPaymentFilter] = useState('semua')
   const [statusFilter, setStatusFilter] = useState('semua')
   const [selectedTransaction, setSelectedTransaction] = useState(null)
-  const [returnTransaction, setReturnTransaction] = useState(null)
-  const [savingReturn, setSavingReturn] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [canceling, setCanceling] = useState(false)
   const [cancelError, setCancelError] = useState('')
-  const [returnReport, setReturnReport] = useState({ retur: [], total_retur: 0, total_barang_retur: 0, filter_options: { alasan: [] } })
-  const [returnLoading, setReturnLoading] = useState(false)
-  const [returnFilters, setReturnFilters] = useState({
-    start_date: toInputDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
-    end_date: toInputDate(new Date()),
-    search: '',
-    alasan: 'semua',
-    metode: 'semua',
-  })
 
   useEffect(() => { fetchLaporan() }, [startDate, endDate])
-
-  useEffect(() => { fetchReturnHistory() }, [returnFilters.start_date, returnFilters.end_date, returnFilters.alasan, returnFilters.metode])
 
   useEffect(() => {
     document.body.classList.toggle('report-print-mode', reportPrintMode)
@@ -67,38 +53,24 @@ export default function LaporanPenjualan() {
 
   const fetchLaporan = async () => {
     setLoading(true)
+    setReportError('')
     try {
-      const res = await api.get(`/laporan/penjualan?start_date=${startDate}&end_date=${endDate}`)
-      setData(res.data)
+      const salesRes = await api.get(`/laporan/penjualan?start_date=${startDate}&end_date=${endDate}`)
+      setData(salesRes.data)
+
+      try {
+        const returnRes = await api.get(`/laporan/retur-pelanggan?start_date=2000-01-01&end_date=${toInputDate(new Date())}`)
+        setCustomerReturns(Array.isArray(returnRes.data.retur) ? returnRes.data.retur : [])
+      } catch (returnError) {
+        setCustomerReturns([])
+        toast.error(getApiErrorMessage(returnError, 'Gagal memuat penanda retur pelanggan'))
+      }
     } catch (e) {
-      toast.error(getApiErrorMessage(e, 'Gagal memuat laporan penjualan'))
+      const message = getApiErrorMessage(e, 'Gagal memuat laporan penjualan')
+      setReportError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const buildReturnQuery = () => {
-    const params = new URLSearchParams()
-    Object.entries(returnFilters).forEach(([key, value]) => {
-      if (value) params.append(key, value)
-    })
-    return params.toString()
-  }
-
-  const fetchReturnHistory = async () => {
-    setReturnLoading(true)
-    try {
-      const res = await api.get(`/laporan/retur-pelanggan?${buildReturnQuery()}`)
-      setReturnReport({
-        retur: Array.isArray(res.data.retur) ? res.data.retur : [],
-        total_retur: res.data.total_retur || 0,
-        total_barang_retur: res.data.total_barang_retur || 0,
-        filter_options: res.data.filter_options || { alasan: [] },
-      })
-    } catch (e) {
-      toast.error(getApiErrorMessage(e, 'Gagal memuat riwayat retur pelanggan'))
-    } finally {
-      setReturnLoading(false)
     }
   }
 
@@ -121,7 +93,6 @@ export default function LaporanPenjualan() {
     .replace(/"/g, '&quot;')
 
   const printReport = () => {
-    if (activeTab === 'retur') return printReturnReport()
     if (data.transaksi.length === 0) return toast.error('Tidak ada transaksi untuk dicetak')
     setReportPrintMode(true)
     window.setTimeout(() => {
@@ -131,7 +102,6 @@ export default function LaporanPenjualan() {
   }
 
   const exportExcel = () => {
-    if (activeTab === 'retur') return exportReturnExcel()
     if (filteredTransactions.length === 0) return toast.error('Tidak ada transaksi untuk diexport')
 
     const formatItems = (transaction) => transaction.details?.map(item => `${item.nama_barang} (${item.kode_barang}) - ${item.jumlah} x ${formatRupiah(item.harga_satuan)}`).join('; ') || '-'
@@ -144,6 +114,8 @@ export default function LaporanPenjualan() {
           <td>${escapeExcel(formatDateTime(transaction.created_at || transaction.tanggal))}</td>
           <td>${escapeExcel(transaction.metode_pembayaran?.toUpperCase())}</td>
           <td>${escapeExcel(transaction.status)}</td>
+          <td>${escapeExcel(transaction.has_customer_return ? 'Ada Retur' : '-')}</td>
+          <td>${Number(transaction.nilai_retur || 0)}</td>
           <td>${escapeExcel(items)}</td>
           <td>${Number(transaction.total_harga)}</td>
         </tr>
@@ -155,21 +127,31 @@ export default function LaporanPenjualan() {
         <head><meta charset="UTF-8"></head>
         <body>
           <table border="1">
-            <tr><th colspan="6">Laporan Penjualan Sultan Cell</th></tr>
-            <tr><td colspan="6">Periode: ${escapeExcel(startDate)} sampai ${escapeExcel(endDate)}</td></tr>
-            <tr><td colspan="6">Dicetak: ${escapeExcel(formatDateTime(new Date()))}</td></tr>
+            <tr><th colspan="8">Laporan Penjualan Sultan Cell</th></tr>
+            <tr><td colspan="8">Periode: ${escapeExcel(startDate)} sampai ${escapeExcel(endDate)}</td></tr>
+            <tr><td colspan="8">Dicetak: ${escapeExcel(formatDateTime(new Date()))}</td></tr>
             <tr>
               <th>Kode Transaksi</th>
               <th>Waktu</th>
               <th>Pembayaran</th>
               <th>Status</th>
+              <th>Penanda Retur</th>
+              <th>Nilai Retur</th>
               <th>Detail Barang</th>
               <th>Total</th>
             </tr>
             ${rows}
             <tr>
-              <td colspan="5"><strong>Total Penjualan</strong></td>
+              <td colspan="7"><strong>Penjualan Kotor</strong></td>
               <td><strong>${Number(filteredTotal)}</strong></td>
+            </tr>
+            <tr>
+              <td colspan="7"><strong>Retur Pelanggan</strong></td>
+              <td><strong>${Number(filteredReturnValue)}</strong></td>
+            </tr>
+            <tr>
+              <td colspan="7"><strong>Penjualan Bersih</strong></td>
+              <td><strong>${Number(filteredNetTotal)}</strong></td>
             </tr>
           </table>
         </body>
@@ -186,67 +168,6 @@ export default function LaporanPenjualan() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
     toast.success('Laporan Excel berhasil dibuat')
-  }
-
-  const printReturnReport = () => {
-    if (returnReport.retur.length === 0) return toast.error('Tidak ada retur pelanggan untuk dicetak')
-    setReportPrintMode(true)
-    window.setTimeout(() => {
-      window.print()
-      window.setTimeout(() => setReportPrintMode(false), 1600)
-    }, 80)
-  }
-
-  const exportReturnExcel = () => {
-    if (returnReport.retur.length === 0) return toast.error('Tidak ada retur pelanggan untuk diexport')
-
-    const rows = returnReport.retur.map(item => `
-      <tr>
-        <td>${escapeExcel(item.nomor_retur)}</td>
-        <td>${escapeExcel(new Date(item.tanggal_retur).toLocaleDateString('id-ID'))}</td>
-        <td>${escapeExcel(item.kode_transaksi)}</td>
-        <td>${escapeExcel(item.nama_barang)}</td>
-        <td>${Number(item.jumlah_retur || 0)}</td>
-        <td>${escapeExcel(item.alasan_retur)}</td>
-        <td>${escapeExcel(formatReturnMethod(item.metode_pengembalian_dana))}</td>
-        <td>${escapeExcel(item.keterangan || '-')}</td>
-      </tr>
-    `).join('')
-
-    const html = `
-      <html>
-        <head><meta charset="UTF-8"></head>
-        <body>
-          <table border="1">
-            <tr><th colspan="8">Laporan Riwayat Retur Pelanggan Sultan Cell</th></tr>
-            <tr><td colspan="8">Periode: ${escapeExcel(returnFilters.start_date)} sampai ${escapeExcel(returnFilters.end_date)}</td></tr>
-            <tr><td colspan="8">Dicetak: ${escapeExcel(formatDateTime(new Date()))}</td></tr>
-            <tr>
-              <th>Nomor Retur</th>
-              <th>Tanggal Retur</th>
-              <th>Nomor Transaksi</th>
-              <th>Nama Barang</th>
-              <th>Jumlah Retur</th>
-              <th>Alasan Retur</th>
-              <th>Metode Pengembalian Dana</th>
-              <th>Keterangan</th>
-            </tr>
-            ${rows}
-          </table>
-        </body>
-      </html>
-    `
-
-    const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `riwayat-retur-pelanggan-${returnFilters.start_date}-${returnFilters.end_date}.xls`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    toast.success('Excel retur pelanggan berhasil dibuat')
   }
 
   const resetReport = async () => {
@@ -307,35 +228,43 @@ export default function LaporanPenjualan() {
     }
   }
 
-  const returTransaction = (transaction) => {
-    if (transaction.status === 'batal') return toast.error('Transaksi batal tidak bisa diretur')
-    if (!transaction.details?.length) return toast.error('Detail barang tidak tersedia')
-    setReturnTransaction(transaction)
-  }
-
-  const submitCustomerReturn = async (payload) => {
-    if (!returnTransaction) return
-    setSavingReturn(true)
-    try {
-      await api.post(`/penjualan/${returnTransaction.id}/retur`, payload)
-      toast.success('Retur berhasil dicatat dan stok dikembalikan')
-      setReturnTransaction(null)
-      fetchLaporan()
-      fetchReturnHistory()
-    } catch (e) {
-      toast.error(getApiErrorMessage(e, 'Gagal mencatat retur'))
-    } finally {
-      setSavingReturn(false)
-    }
-  }
-
   const printTransactionReceipt = () => {
     window.setTimeout(() => window.print(), 80)
   }
 
-  const formatReturnMethod = (value) => value === 'qris' ? 'QRIS' : value === 'tunai' ? 'Tunai' : '-'
+  const returnedByDetail = useMemo(() => {
+    return customerReturns.reduce((map, item) => {
+      const key = String(item.detail_penjualan_id || '')
+      if (!key) return map
+      map[key] = (map[key] || 0) + Number(item.jumlah_retur || 0)
+      return map
+    }, {})
+  }, [customerReturns])
 
-  const filteredTransactions = data.transaksi.filter(transaction => {
+  const annotatedTransactions = useMemo(() => {
+    return data.transaksi.map(transaction => {
+      let nilaiRetur = 0
+      const details = (transaction.details || []).map(detail => {
+        const jumlahSudahRetur = returnedByDetail[String(detail.id)] || 0
+        const nilaiReturDetail = jumlahSudahRetur * Number(detail.harga_satuan || 0)
+        nilaiRetur += nilaiReturDetail
+        return {
+          ...detail,
+          jumlah_sudah_retur: jumlahSudahRetur,
+          nilai_retur: nilaiReturDetail,
+        }
+      })
+
+      return {
+        ...transaction,
+        details,
+        has_customer_return: details.some(detail => detail.jumlah_sudah_retur > 0),
+        nilai_retur: nilaiRetur,
+      }
+    })
+  }, [data.transaksi, returnedByDetail])
+
+  const filteredTransactions = annotatedTransactions.filter(transaction => {
     const itemText = transaction.details?.map(item => `${item.nama_barang} ${item.kode_barang}`).join(' ') || ''
     const keyword = `${transaction.kode_transaksi} ${itemText}`.toLowerCase()
     const matchSearch = keyword.includes(search.toLowerCase())
@@ -343,11 +272,11 @@ export default function LaporanPenjualan() {
     const matchStatus = statusFilter === 'semua' || transaction.status === statusFilter
     return matchSearch && matchPayment && matchStatus
   })
-  const tunaiCount = filteredTransactions.filter(t => t.metode_pembayaran === 'tunai').length
-  const qrisCount = filteredTransactions.filter(t => t.metode_pembayaran === 'qris').length
   const activeTransactions = filteredTransactions.filter(t => t.status === 'lunas')
   const filteredTotal = activeTransactions.reduce((sum, t) => sum + Number(t.total_harga || 0), 0)
-  const averageSale = activeTransactions.length ? filteredTotal / activeTransactions.length : 0
+  const filteredReturnValue = activeTransactions.reduce((sum, t) => sum + Number(t.nilai_retur || 0), 0)
+  const filteredNetTotal = Math.max(filteredTotal - filteredReturnValue, 0)
+  const transactionsWithReturn = filteredTransactions.filter(t => t.has_customer_return).length
   const getStatusClass = (status) => status === 'lunas' ? 'paid' : status === 'batal' ? 'cancelled' : 'pending'
   const getTransactionItems = (transaction) => transaction.details?.length
     ? transaction.details.map(item => `${item.nama_barang} (${item.jumlah}x)`).join(', ')
@@ -360,12 +289,12 @@ export default function LaporanPenjualan() {
         <div>
           <span>Laporan Kasir</span>
           <h1>Laporan Penjualan</h1>
-          <p>Pantau transaksi penjualan dan riwayat retur pelanggan dalam satu halaman laporan.</p>
+          <p>Pantau transaksi penjualan dalam satu halaman laporan.</p>
         </div>
         <div className="report-heading-actions">
           <div className="report-date-range">
             <CalendarDays size={18} />
-            <span>{activeTab === 'retur' ? `${returnFilters.start_date} sampai ${returnFilters.end_date}` : `${startDate} sampai ${endDate}`}</span>
+            <span>{startDate} sampai {endDate}</span>
           </div>
           <div className="report-action-buttons no-print">
             <button type="button" onClick={printReport} className="report-action-button print">
@@ -376,29 +305,14 @@ export default function LaporanPenjualan() {
               <FileSpreadsheet size={17} />
               <span>Excel</span>
             </button>
-            {activeTab === 'transaksi' && (
-              <button type="button" onClick={resetReport} disabled={resetting || loading} className="report-action-button reset">
-                <RotateCcw size={17} />
-                <span>{resetting ? 'Reset...' : 'Reset'}</span>
-              </button>
-            )}
+            <button type="button" onClick={resetReport} disabled={resetting || loading} className="report-action-button reset">
+              <RotateCcw size={17} />
+              <span>{resetting ? 'Reset...' : 'Reset'}</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="report-tab-bar no-print">
-        <button type="button" className={activeTab === 'transaksi' ? 'active' : ''} onClick={() => setActiveTab('transaksi')}>
-          <ReceiptText size={17} />
-          <span>Data Transaksi Penjualan</span>
-        </button>
-        <button type="button" className={activeTab === 'retur' ? 'active' : ''} onClick={() => setActiveTab('retur')}>
-          <RotateCcw size={17} />
-          <span>Riwayat Retur Pelanggan</span>
-        </button>
-      </div>
-
-      {activeTab === 'transaksi' && (
-      <>
       <section className="report-filter-panel">
         <label className="field-group">
           <span>Tanggal Mulai</span>
@@ -429,23 +343,23 @@ export default function LaporanPenjualan() {
       <div className="report-summary-grid">
         <div className="report-card primary">
           <div><TrendingUp size={24} /></div>
-          <span>Total Penjualan</span>
+          <span>Penjualan Kotor</span>
           <strong>{formatRupiah(filteredTotal)}</strong>
         </div>
         <div className="report-card">
-          <div><ReceiptText size={24} /></div>
-          <span>Jumlah Transaksi</span>
-          <strong>{filteredTransactions.length}</strong>
+          <div><RotateCcw size={24} /></div>
+          <span>Retur Pelanggan</span>
+          <strong>{formatRupiah(filteredReturnValue)}</strong>
         </div>
         <div className="report-card">
           <div><WalletCards size={24} /></div>
-          <span>Tunai / QRIS</span>
-          <strong>{tunaiCount} / {qrisCount}</strong>
+          <span>Penjualan Bersih</span>
+          <strong>{formatRupiah(filteredNetTotal)}</strong>
         </div>
         <div className="report-card">
           <div><FileText size={24} /></div>
-          <span>Rata-rata Transaksi</span>
-          <strong>{formatRupiah(averageSale)}</strong>
+          <span>Transaksi Ada Retur</span>
+          <strong>{transactionsWithReturn}</strong>
         </div>
       </div>
 
@@ -466,7 +380,9 @@ export default function LaporanPenjualan() {
                 <th>Tanggal</th>
                 <th>Pembayaran</th>
                 <th>Status</th>
-                <th>Total</th>
+                <th>Retur</th>
+                <th className="money-header">Nilai Retur</th>
+                <th className="money-header">Total</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -483,11 +399,12 @@ export default function LaporanPenjualan() {
                   <td>{new Date(transaction.tanggal).toLocaleDateString('id-ID')}</td>
                   <td><span className={`payment-pill ${transaction.metode_pembayaran}`}>{transaction.metode_pembayaran}</span></td>
                   <td><span className={`status-pill ${getStatusClass(transaction.status)}`}>{transaction.status}</span></td>
+                  <td>{transaction.has_customer_return ? <span className="status-pill pending">Ada Retur</span> : '-'}</td>
+                  <td className="money-cell">{transaction.nilai_retur ? formatRupiah(transaction.nilai_retur) : '-'}</td>
                   <td className="money-cell strong">{formatRupiah(transaction.total_harga)}</td>
                   <td>
                     <div className="table-actions">
                       <button type="button" className="table-action-button" onClick={() => setSelectedTransaction(transaction)}><Eye size={15} />Detail</button>
-                      <button type="button" className="table-action-button" onClick={() => returTransaction(transaction)} disabled={transaction.status === 'batal'}><RotateCcw size={15} />Retur</button>
                       <button type="button" className="table-action-button danger" onClick={() => openCancelDialog(transaction)} disabled={transaction.status === 'batal'}><XCircle size={15} />Batal</button>
                     </div>
                   </td>
@@ -496,121 +413,31 @@ export default function LaporanPenjualan() {
             </tbody>
           </table>
 
-          {!loading && filteredTransactions.length === 0 && (
+          {loading && (
+            <div className="report-empty">
+              <ReceiptText size={42} />
+              <p>Memuat riwayat transaksi</p>
+              <span>Sistem sedang mengambil data penjualan dari database.</span>
+            </div>
+          )}
+
+          {!loading && reportError && (
+            <div className="report-empty error">
+              <XCircle size={42} />
+              <p>Riwayat transaksi gagal dimuat</p>
+              <span>{reportError}</span>
+            </div>
+          )}
+
+          {!loading && !reportError && filteredTransactions.length === 0 && (
             <div className="report-empty">
               <FileText size={42} />
               <p>Tidak ada data penjualan</p>
-              <span>Coba ubah periode tanggal atau buat transaksi baru.</span>
+              <span>Coba ubah periode tanggal, filter pembayaran/status, atau buat transaksi baru.</span>
             </div>
           )}
         </div>
       </section>
-      </>
-      )}
-
-      {activeTab === 'retur' && (
-      <>
-      <div className="print-report-header">
-        <img src={sultanCellLogo} alt="Logo Sultan Cell" />
-        <div>
-          <span>Sultan Cell</span>
-          <h2>Laporan Riwayat Retur Pelanggan</h2>
-          <p>Periode {returnFilters.start_date} sampai {returnFilters.end_date}</p>
-        </div>
-      </div>
-
-      <section className="report-filter-panel return-history-filter-panel no-print">
-        <label className="field-group">
-          <span>Tanggal Mulai</span>
-          <input type="date" value={returnFilters.start_date} onChange={e => setReturnFilters({ ...returnFilters, start_date: e.target.value })} />
-        </label>
-        <label className="field-group">
-          <span>Tanggal Akhir</span>
-          <input type="date" value={returnFilters.end_date} onChange={e => setReturnFilters({ ...returnFilters, end_date: e.target.value })} />
-        </label>
-        <label className="field-group">
-          <span>Alasan Retur</span>
-          <select value={returnFilters.alasan} onChange={e => setReturnFilters({ ...returnFilters, alasan: e.target.value })}>
-            <option value="semua">Semua</option>
-            {returnReport.filter_options.alasan?.map(option => <option key={option} value={option}>{option}</option>)}
-          </select>
-        </label>
-        <label className="field-group">
-          <span>Metode Dana</span>
-          <select value={returnFilters.metode} onChange={e => setReturnFilters({ ...returnFilters, metode: e.target.value })}>
-            <option value="semua">Semua</option>
-            <option value="tunai">Tunai</option>
-            <option value="qris">QRIS</option>
-          </select>
-        </label>
-        <label className="field-group">
-          <span>Pencarian</span>
-          <input value={returnFilters.search} onChange={e => setReturnFilters({ ...returnFilters, search: e.target.value })} onKeyDown={e => e.key === 'Enter' && fetchReturnHistory()} placeholder="Nomor retur, transaksi, barang" />
-        </label>
-        <button type="button" onClick={fetchReturnHistory} className="filter-search-button"><Search size={17} />Cari</button>
-      </section>
-
-      <div className="brilink-summary-grid return-history-summary-grid">
-        <div className="brilink-summary-card"><div className="summary-icon blue"><RotateCcw size={22} /></div><span>Total Retur</span><strong>{returnReport.total_retur}</strong></div>
-        <div className="brilink-summary-card"><div className="summary-icon green"><FileText size={22} /></div><span>Total Barang Retur</span><strong>{returnReport.total_barang_retur} pcs</strong></div>
-        <div className="brilink-summary-card"><div className="summary-icon amber"><WalletCards size={22} /></div><span>Pengembalian Tunai</span><strong>{returnReport.retur.filter(item => item.metode_pengembalian_dana === 'tunai').length}</strong></div>
-        <div className="brilink-summary-card"><div className="summary-icon purple"><WalletCards size={22} /></div><span>Pengembalian QRIS</span><strong>{returnReport.retur.filter(item => item.metode_pengembalian_dana === 'qris').length}</strong></div>
-      </div>
-
-      <section className="report-table-panel">
-        <div className="report-table-header">
-          <div>
-            <h2>Riwayat Retur Pelanggan</h2>
-            <p>{returnLoading ? 'Memuat data...' : `${returnReport.retur.length} retur pelanggan ditemukan`}</p>
-          </div>
-        </div>
-
-        <div className="report-table-wrap">
-          <table className="report-table return-history-table">
-            <thead>
-              <tr>
-                <th>Nomor Retur</th>
-                <th>Tanggal Retur</th>
-                <th>Nomor Transaksi</th>
-                <th>Nama Barang</th>
-                <th>Jumlah Retur</th>
-                <th>Alasan Retur</th>
-                <th>Metode Pengembalian Dana</th>
-                <th>Keterangan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {returnReport.retur.map(item => (
-                <tr key={item.id}>
-                  <td><span className="item-code">{item.nomor_retur}</span></td>
-                  <td>{new Date(item.tanggal_retur).toLocaleDateString('id-ID')}</td>
-                  <td>{item.kode_transaksi}</td>
-                  <td>
-                    <div className="report-item-list">
-                      <strong>{item.nama_barang}</strong>
-                      <span>{item.kode_barang}</span>
-                    </div>
-                  </td>
-                  <td>{item.jumlah_retur} pcs</td>
-                  <td>{item.alasan_retur}</td>
-                  <td><span className={`payment-pill ${item.metode_pengembalian_dana}`}>{formatReturnMethod(item.metode_pengembalian_dana)}</span></td>
-                  <td>{item.keterangan || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {!returnLoading && returnReport.retur.length === 0 && (
-            <div className="report-empty">
-              <RotateCcw size={42} />
-              <p>Tidak ada retur pelanggan</p>
-              <span>Coba ubah filter tanggal, alasan, metode dana, atau pencarian.</span>
-            </div>
-          )}
-        </div>
-      </section>
-      </>
-      )}
       </div>
 
       <Modal isOpen={Boolean(selectedTransaction)} onClose={() => setSelectedTransaction(null)} title="Detail Transaksi" size="sm">
@@ -620,7 +447,7 @@ export default function LaporanPenjualan() {
               <div className="receipt-store">
                 <strong>SULTAN CELL</strong>
                 <span>Konter HP & Agen BRILink</span>
-                <span>Struk Transaksi Penjualan</span>
+                <em>Struk Transaksi Penjualan</em>
               </div>
               <div className="receipt-divider"></div>
               <div className="receipt-meta">
@@ -629,8 +456,10 @@ export default function LaporanPenjualan() {
                 <div><span>Kasir</span><strong>{selectedTransaction.kasir || 'Admin'}</strong></div>
                 <div><span>Status</span><strong>{selectedTransaction.status}</strong></div>
                 <div><span>Bayar</span><strong>{selectedTransaction.metode_pembayaran?.toUpperCase()}</strong></div>
+                <div><span>Retur</span><strong>{selectedTransaction.has_customer_return ? 'Ada Retur' : '-'}</strong></div>
               </div>
               <div className="receipt-divider"></div>
+              <div className="receipt-section-label">Daftar Barang</div>
               <div className="receipt-items">
                 {selectedTransaction.details?.map(item => (
                   <div key={item.id} className="receipt-item">
@@ -644,13 +473,19 @@ export default function LaporanPenjualan() {
                 ))}
               </div>
               <div className="receipt-divider"></div>
-              <div className="receipt-total-row"><span>Total</span><strong>{formatRupiah(selectedTransaction.total_harga)}</strong></div>
+              <div className="receipt-total-row receipt-grand-total"><span>Total</span><strong>{formatRupiah(selectedTransaction.total_harga)}</strong></div>
+              {selectedTransaction.has_customer_return && (
+                <>
+                  <div className="receipt-total-row"><span>Retur</span><strong>{formatRupiah(selectedTransaction.nilai_retur)}</strong></div>
+                  <div className="receipt-total-row"><span>Bersih</span><strong>{formatRupiah(Math.max(Number(selectedTransaction.total_harga || 0) - Number(selectedTransaction.nilai_retur || 0), 0))}</strong></div>
+                </>
+              )}
               <div className="receipt-total-row"><span>Bayar</span><strong>{formatRupiah(selectedTransaction.uang_bayar || selectedTransaction.total_harga)}</strong></div>
               <div className="receipt-total-row"><span>Kembali</span><strong>{formatRupiah(selectedTransaction.kembalian || 0)}</strong></div>
               {selectedTransaction.alasan_batal && <div className="receipt-note">Batal: {selectedTransaction.alasan_batal}</div>}
               <div className="receipt-footer">
                 <p>Terima kasih sudah berbelanja</p>
-                <span>Barang yang sudah dibeli harap dicek kembali.</span>
+                <span>Simpan struk ini sebagai bukti transaksi.</span>
               </div>
             </div>
             <div className="receipt-actions no-print">
@@ -663,14 +498,6 @@ export default function LaporanPenjualan() {
           </div>
         )}
       </Modal>
-
-      <CustomerReturnModal
-        open={Boolean(returnTransaction)}
-        transaction={returnTransaction}
-        loading={savingReturn}
-        onClose={() => !savingReturn && setReturnTransaction(null)}
-        onSubmit={submitCustomerReturn}
-      />
 
       <Modal isOpen={Boolean(cancelTarget)} onClose={closeCancelDialog} title="Batalkan Transaksi" size="md">
         {cancelTarget && (

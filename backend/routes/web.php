@@ -14,5 +14,21 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
+    $frontend = public_path('app/index.html');
+
+    if (file_exists($frontend)) {
+        return response()->file($frontend);
+    }
+
     return view('welcome');
 });
+
+Route::get('/{any}', function () {
+    $frontend = public_path('app/index.html');
+
+    if (!file_exists($frontend)) {
+        abort(404, 'Frontend belum dibuild. Jalankan npm run build di folder frontend.');
+    }
+
+    return response()->file($frontend);
+})->where('any', '^(?!api).*$');

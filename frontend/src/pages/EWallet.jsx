@@ -3,6 +3,8 @@ import { WalletCards, Plus, RefreshCcw } from 'lucide-react'
 import { formatRupiah } from '../utils/formatRupiah'
 import { formatNominalInput, parseNominalInput } from '../utils/nominalInput'
 import { useBiayaAdminBrilink } from '../hooks/useBiayaAdminBrilink'
+import ProviderFields, { normalizeProvider } from '../components/Brilink/ProviderFields'
+import BrilinkReceiptModal from '../components/Brilink/BrilinkReceiptModal'
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -10,10 +12,14 @@ export default function EWallet() {
   const [data, setData] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [receipt, setReceipt] = useState(null)
+  const [showReceipt, setShowReceipt] = useState(false)
   const { hitung } = useBiayaAdminBrilink()
   const [form, setForm] = useState({
     jenis_transaksi: 'top_up',
-    provider: 'DANA',
+    provider: 'BRILink Mobile',
+    nama_provider: '',
+    jenis_ewallet: 'DANA',
     nomor_ewallet: '',
     nama_customer: '',
     nominal: '',
@@ -35,10 +41,12 @@ export default function EWallet() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await api.post('/ewallet', { ...form, nominal: parseNominalInput(form.nominal) })
+      const res = await api.post('/ewallet', { ...form, provider: normalizeProvider(form), nominal: parseNominalInput(form.nominal) })
       toast.success('Transaksi e-wallet berhasil dicatat')
+      setReceipt({ type: 'ewallet', data: res.data })
+      setShowReceipt(true)
       setData(prev => [res.data, ...prev])
-      setForm({ jenis_transaksi: 'top_up', provider: 'DANA', nomor_ewallet: '', nama_customer: '', nominal: '', keterangan: '' })
+      setForm({ jenis_transaksi: 'top_up', provider: 'BRILink Mobile', nama_provider: '', jenis_ewallet: 'DANA', nomor_ewallet: '', nama_customer: '', nominal: '', keterangan: '' })
       setShowForm(false)
     } catch (e) {
       toast.error(getApiErrorMessage(e, 'Gagal menyimpan transaksi e-wallet'))
@@ -72,8 +80,9 @@ export default function EWallet() {
         <section className="brilink-form-card">
           <div className="brilink-section-title"><WalletCards size={20} /><div><h2>Form E-Wallet</h2><p>Nominal akan dihitung dengan biaya admin range bertingkat.</p></div></div>
           <form onSubmit={submit} className="brilink-form-grid">
+            <ProviderFields form={form} setForm={setForm} />
             <label className="field-group"><span>Jenis Transaksi</span><select value={form.jenis_transaksi} onChange={e => setForm({ ...form, jenis_transaksi: e.target.value })}><option value="top_up">Top Up</option><option value="pencairan">Pencairan Dana</option></select></label>
-            <label className="field-group"><span>Provider</span><select value={form.provider} onChange={e => setForm({ ...form, provider: e.target.value })}><option>DANA</option><option>OVO</option><option>GoPay</option><option>ShopeePay</option><option>LinkAja</option><option>Lainnya</option></select></label>
+            <label className="field-group"><span>Jenis E-Wallet</span><select value={form.jenis_ewallet} onChange={e => setForm({ ...form, jenis_ewallet: e.target.value })}><option>DANA</option><option>OVO</option><option>GoPay</option><option>ShopeePay</option><option>LinkAja</option><option>Lainnya</option></select></label>
             <label className="field-group"><span>Nomor E-Wallet</span><input value={form.nomor_ewallet} onChange={e => setForm({ ...form, nomor_ewallet: e.target.value })} required placeholder="08xxxxxxxxxx" /></label>
             <label className="field-group"><span>Nama Customer</span><input value={form.nama_customer} onChange={e => setForm({ ...form, nama_customer: e.target.value })} placeholder="Opsional" /></label>
             <label className="field-group"><span>Nominal</span><input type="text" inputMode="numeric" value={form.nominal} onChange={e => setForm({ ...form, nominal: formatNominalInput(e.target.value) })} required placeholder="Contoh: 50.000" /></label>
@@ -87,14 +96,26 @@ export default function EWallet() {
       <section className="brilink-table-panel">
         <div className="brilink-table-header"><div><h2>Riwayat E-Wallet</h2><p>{data.length} transaksi tercatat</p></div></div>
         <div className="brilink-table-wrap">
-          <table className="brilink-table">
-            <thead><tr><th>Kode</th><th>Tanggal</th><th>Jenis</th><th>Provider</th><th>Nomor</th><th>Nominal</th><th>Admin</th><th>Total</th></tr></thead>
+          <table className="brilink-table ewallet-table">
+            <colgroup>
+              <col className="ewallet-code-col" />
+              <col className="ewallet-date-col" />
+              <col className="ewallet-type-col" />
+              <col className="ewallet-provider-col" />
+              <col className="ewallet-provider-col" />
+              <col className="ewallet-number-col" />
+              <col className="ewallet-money-col" />
+              <col className="ewallet-money-col" />
+              <col className="ewallet-money-col" />
+            </colgroup>
+            <thead><tr><th>Kode</th><th>Tanggal</th><th>Jenis</th><th>Provider</th><th>E-Wallet</th><th>Nomor</th><th className="money-header">Nominal</th><th className="money-header">Admin</th><th className="money-header">Total</th></tr></thead>
             <tbody>{data.map(item => (
               <tr key={item.id}>
                 <td><span className="item-code">{item.kode_transaksi}</span></td>
                 <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
                 <td><span className="service-pill blue">{item.jenis_transaksi === 'top_up' ? 'Top Up' : 'Pencairan'}</span></td>
                 <td>{item.provider}</td>
+                <td>{item.jenis_ewallet || item.provider}</td>
                 <td>{item.nomor_ewallet}</td>
                 <td className="money-cell">{formatRupiah(item.nominal)}</td>
                 <td className="money-cell admin">{formatRupiah(item.biaya_admin)}</td>
@@ -104,6 +125,12 @@ export default function EWallet() {
           </table>
         </div>
       </section>
+
+      <BrilinkReceiptModal
+        isOpen={showReceipt}
+        receipt={receipt}
+        onClose={() => setShowReceipt(false)}
+      />
     </div>
   )
 }

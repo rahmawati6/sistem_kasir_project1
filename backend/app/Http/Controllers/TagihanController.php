@@ -19,12 +19,14 @@ class TagihanController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'jenis_layanan' => 'required|in:pln,pdam,bpjs,indihome,angsuran,lainnya',
             'nomor_pelanggan' => 'required',
             'nama_pelanggan' => 'required',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'jumlah_tagihan' => 'required|numeric|min:1',
         ], [
+            'provider.required' => 'Provider transaksi wajib diisi.',
             'jenis_layanan.required' => 'Jenis tagihan wajib dipilih.',
             'jenis_layanan.in' => 'Jenis tagihan tidak valid.',
             'nomor_pelanggan.required' => 'Nomor pelanggan wajib diisi.',
@@ -59,6 +61,7 @@ class TagihanController extends Controller
     {
         $t = PembayaranTagihan::findOrFail($id);
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'jenis_layanan' => 'required|in:pln,pdam,bpjs,indihome,angsuran,lainnya',
             'nomor_pelanggan' => 'required',
             'nama_pelanggan' => 'required',

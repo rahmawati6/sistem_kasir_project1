@@ -5,16 +5,20 @@ import { formatNominalInput, parseNominalInput } from '../utils/nominalInput'
 import { getLabelJenisNasabah } from '../utils/brilinkNasabah'
 import { useBiayaAdminBrilink } from '../hooks/useBiayaAdminBrilink'
 import NasabahKartuFields from '../components/Brilink/NasabahKartuFields'
+import ProviderFields, { normalizeProvider } from '../components/Brilink/ProviderFields'
+import BrilinkReceiptModal from '../components/Brilink/BrilinkReceiptModal'
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 
-const emptyForm = { jenis_layanan: 'pln', jenis_nasabah: 'internal', nomor_pelanggan: '', nama_pelanggan: '', jumlah_tagihan: '' }
+const emptyForm = { provider: 'BRILink Mobile', nama_provider: '', jenis_layanan: 'pln', jenis_nasabah: 'internal', nomor_pelanggan: '', nama_pelanggan: '', jumlah_tagihan: '' }
 
 export default function PembayaranTagihan() {
   const [data, setData] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [receipt, setReceipt] = useState(null)
+  const [showReceipt, setShowReceipt] = useState(false)
   const { hitung } = useBiayaAdminBrilink()
 
   useEffect(() => { fetchData() }, [])
@@ -23,8 +27,10 @@ export default function PembayaranTagihan() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true)
     try {
-      await api.post('/tagihan', { ...form, jumlah_tagihan: parseNominalInput(form.jumlah_tagihan) })
+      const res = await api.post('/tagihan', { ...form, provider: normalizeProvider(form), jumlah_tagihan: parseNominalInput(form.jumlah_tagihan) })
       toast.success('Pembayaran tagihan berhasil!')
+      setReceipt({ type: 'tagihan', data: res.data })
+      setShowReceipt(true)
       fetchData(); setShowForm(false); setForm(emptyForm)
     } catch (e) { toast.error(getApiErrorMessage(e, 'Gagal menyimpan pembayaran tagihan')) } finally { setLoading(false) }
   }
@@ -51,6 +57,7 @@ export default function PembayaranTagihan() {
         <section className="brilink-form-card">
           <div className="brilink-section-title"><Receipt size={20} /><div><h2>Form Pembayaran</h2><p>Masukkan layanan dan data pelanggan tagihan.</p></div></div>
           <form onSubmit={handleSubmit} className="brilink-form-grid">
+            <ProviderFields form={form} setForm={setForm} />
             <label className="field-group"><span>Jenis Layanan</span><select value={form.jenis_layanan} onChange={e => setForm({ ...form, jenis_layanan: e.target.value })}><option value="pln">PLN</option><option value="pdam">PDAM</option><option value="bpjs">BPJS</option><option value="indihome">IndiHome</option><option value="angsuran">Angsuran</option><option value="lainnya">Lainnya</option></select></label>
             <NasabahKartuFields value={form.jenis_nasabah} onChange={jenisNasabah => setForm({ ...form, jenis_nasabah: jenisNasabah })} />
             <label className="field-group"><span>No. Pelanggan</span><input type="text" value={form.nomor_pelanggan} onChange={e => setForm({ ...form, nomor_pelanggan: e.target.value })} required /></label>
@@ -66,10 +73,10 @@ export default function PembayaranTagihan() {
         <div className="brilink-table-header"><div><h2>Riwayat Pembayaran</h2><p>{data.length} pembayaran tercatat</p></div></div>
         <div className="brilink-table-wrap">
           <table className="brilink-table">
-            <thead><tr><th>Kode</th><th>Tanggal</th><th>Layanan</th><th>Nasabah</th><th>Pelanggan</th><th>Tagihan</th><th>Admin</th><th>Total</th></tr></thead>
+            <thead><tr><th>Kode</th><th>Tanggal</th><th>Provider</th><th>Layanan</th><th>Nasabah</th><th>Pelanggan</th><th className="money-header">Tagihan</th><th className="money-header">Admin</th><th className="money-header">Total</th></tr></thead>
             <tbody>{data.map(t => (
               <tr key={t.id}>
-                <td><span className="item-code">{t.kode_transaksi}</span></td><td>{new Date(t.tanggal).toLocaleDateString('id-ID')}</td><td><span className="service-pill purple">{t.jenis_layanan}</span></td>
+                <td><span className="item-code">{t.kode_transaksi}</span></td><td>{new Date(t.tanggal).toLocaleDateString('id-ID')}</td><td><span className="service-pill green">{t.provider || '-'}</span></td><td><span className="service-pill purple">{t.jenis_layanan}</span></td>
                 <td><div className="person-cell"><strong>{getLabelJenisNasabah(t.jenis_nasabah)}</strong><span>{t.jenis_kartu || '-'}</span></div></td>
                 <td><div className="person-cell"><strong>{t.nama_pelanggan}</strong><span>{t.nomor_pelanggan}</span></div></td>
                 <td className="money-cell">{formatRupiah(t.jumlah_tagihan)}</td><td className="money-cell admin">{formatRupiah(t.biaya_admin)}</td><td className="money-cell strong">{formatRupiah(t.total_bayar)}</td>
@@ -79,6 +86,12 @@ export default function PembayaranTagihan() {
           {data.length === 0 && <div className="brilink-empty"><Receipt size={42} /><p>Belum ada pembayaran tagihan</p><span>Pembayaran baru akan muncul di sini.</span></div>}
         </div>
       </section>
+
+      <BrilinkReceiptModal
+        isOpen={showReceipt}
+        receipt={receipt}
+        onClose={() => setShowReceipt(false)}
+      />
     </div>
   )
 }

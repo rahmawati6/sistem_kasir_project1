@@ -8,7 +8,7 @@ class TransaksiPulsa extends Model
 {
     protected $table = 'transaksi_pulsa';
     protected $fillable = [
-        'kode_transaksi', 'tanggal', 'operator', 'jenis_layanan',
+        'kode_transaksi', 'tanggal', 'provider', 'operator', 'jenis_layanan',
         'nomor_tujuan', 'produk', 'jenis_nasabah', 'jenis_kartu', 'harga', 'biaya_admin', 'total_bayar',
         'status', 'kasir'
     ];

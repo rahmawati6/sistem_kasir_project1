@@ -19,12 +19,14 @@ class TarikTunaiController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'nomor_rekening' => 'required',
             'nama_penerima' => 'required',
             'nomor_hp' => 'required',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_tarik' => 'required|numeric|min:1',
         ], [
+            'provider.required' => 'Provider transaksi wajib diisi.',
             'nomor_rekening.required' => 'Nomor rekening wajib diisi.',
             'nama_penerima.required' => 'Nama penerima wajib diisi.',
             'nomor_hp.required' => 'Nomor HP wajib diisi.',
@@ -58,6 +60,7 @@ class TarikTunaiController extends Controller
     {
         $t = TransaksiTarikTunai::findOrFail($id);
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'nomor_rekening' => 'required',
             'nama_penerima' => 'required',
             'nomor_hp' => 'required',

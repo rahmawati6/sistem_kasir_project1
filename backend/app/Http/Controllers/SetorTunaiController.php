@@ -19,6 +19,7 @@ class SetorTunaiController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'jenis_setoran' => 'required|in:biasa,tabungan',
             'nomor_rekening_tujuan' => 'nullable|string',
             'nama_pemilik_rekening' => 'nullable|string',
@@ -28,6 +29,7 @@ class SetorTunaiController extends Controller
             'sumber_dana' => 'nullable|string',
             'keterangan' => 'nullable|string',
         ], [
+            'provider.required' => 'Provider transaksi wajib diisi.',
             'jenis_setoran.required' => 'Jenis setoran wajib dipilih.',
             'jenis_setoran.in' => 'Jenis setoran tidak valid.',
             'jenis_nasabah.required' => 'Jenis nasabah wajib dipilih.',
@@ -60,6 +62,7 @@ class SetorTunaiController extends Controller
     {
         $s = TransaksiSetorTunai::findOrFail($id);
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'jenis_setoran' => 'required|in:biasa,tabungan',
             'nomor_rekening_tujuan' => 'nullable|string',
             'nama_pemilik_rekening' => 'nullable|string',

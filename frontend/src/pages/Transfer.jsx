@@ -5,10 +5,14 @@ import { formatNominalInput, parseNominalInput } from '../utils/nominalInput'
 import { getLabelJenisNasabah } from '../utils/brilinkNasabah'
 import { useBiayaAdminBrilink } from '../hooks/useBiayaAdminBrilink'
 import NasabahKartuFields from '../components/Brilink/NasabahKartuFields'
+import ProviderFields, { normalizeProvider } from '../components/Brilink/ProviderFields'
+import BrilinkReceiptModal from '../components/Brilink/BrilinkReceiptModal'
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 
 const emptyForm = {
+  provider: 'BRILink Mobile',
+  nama_provider: '',
   jenis_transfer: 'Sesama BRI',
   bank_tujuan: 'BRI',
   nomor_rekening_tujuan: '',
@@ -23,6 +27,8 @@ export default function Transfer() {
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [receipt, setReceipt] = useState(null)
+  const [showReceipt, setShowReceipt] = useState(false)
   const { hitung } = useBiayaAdminBrilink()
 
   useEffect(() => { fetchData() }, [])
@@ -31,8 +37,10 @@ export default function Transfer() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true)
     try {
-      await api.post('/transfer', { ...form, nominal_transfer: parseNominalInput(form.nominal_transfer) })
+      const res = await api.post('/transfer', { ...form, provider: normalizeProvider(form), nominal_transfer: parseNominalInput(form.nominal_transfer) })
       toast.success('Transfer berhasil dicatat!')
+      setReceipt({ type: 'transfer', data: res.data })
+      setShowReceipt(true)
       fetchData(); setShowForm(false); setForm(emptyForm)
     } catch (e) { toast.error(getApiErrorMessage(e, 'Gagal menyimpan transfer')) } finally { setLoading(false) }
   }
@@ -63,6 +71,7 @@ export default function Transfer() {
         <section className="brilink-form-card">
           <div className="brilink-section-title"><Send size={20} /><div><h2>Form Transfer</h2><p>Jenis transfer adalah kategori pendataan. Bank atau tujuan bisa diketik manual.</p></div></div>
           <form onSubmit={handleSubmit} className="brilink-form-grid transfer-form-grid">
+            <ProviderFields form={form} setForm={setForm} />
             <label className="field-group"><span>Jenis Transfer</span><select value={form.jenis_transfer} onChange={e => {
               const jenis = e.target.value
               setForm({
@@ -87,11 +96,12 @@ export default function Transfer() {
         <div className="brilink-table-header"><div><h2>Riwayat Transfer</h2><p>{data.length} transaksi tercatat</p></div></div>
         <div className="brilink-table-wrap">
           <table className="brilink-table">
-            <thead><tr><th>Kode</th><th>Tanggal</th><th>Jenis</th><th>Nasabah</th><th>Penerima</th><th>Nominal</th><th>Admin</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Kode</th><th>Tanggal</th><th>Provider</th><th>Jenis</th><th>Nasabah</th><th>Penerima</th><th className="money-header">Nominal</th><th className="money-header">Admin</th><th className="money-header">Total</th><th>Status</th></tr></thead>
             <tbody>{data.map(t => (
               <tr key={t.id}>
                 <td><span className="item-code">{t.kode_transaksi}</span></td>
                 <td>{new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+                <td><span className="service-pill green">{t.provider || '-'}</span></td>
                 <td><div className="person-cell"><span className="service-pill blue">{t.jenis_transfer}</span><span>{t.bank_tujuan || '-'}</span></div></td>
                 <td><div className="person-cell"><strong>{getLabelJenisNasabah(t.jenis_nasabah)}</strong><span>{t.jenis_kartu || '-'}</span></div></td>
                 <td><div className="person-cell"><strong>{t.nama_penerima}</strong><span>{t.nomor_rekening_tujuan}</span></div></td>
@@ -105,6 +115,12 @@ export default function Transfer() {
           {data.length === 0 && <div className="brilink-empty"><Send size={42} /><p>Belum ada transaksi transfer</p><span>Transaksi baru akan muncul di sini.</span></div>}
         </div>
       </section>
+
+      <BrilinkReceiptModal
+        isOpen={showReceipt}
+        receipt={receipt}
+        onClose={() => setShowReceipt(false)}
+      />
     </div>
   )
 }

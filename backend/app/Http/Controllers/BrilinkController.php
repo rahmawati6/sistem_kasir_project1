@@ -68,7 +68,8 @@ class BrilinkController extends Controller
             $data = collect($data)->filter(function ($item) use ($search) {
                 return str_contains(strtolower($item['kode_transaksi'] ?? ''), $search)
                     || str_contains(strtolower($item['nama_penerima'] ?? $item['nama_pemilik_rekening'] ?? $item['nama_pelanggan'] ?? ''), $search)
-                    || str_contains(strtolower($item['bank_tujuan'] ?? $item['provider'] ?? $item['operator'] ?? ''), $search)
+                    || str_contains(strtolower($item['provider'] ?? ''), $search)
+                    || str_contains(strtolower($item['bank_tujuan'] ?? $item['operator'] ?? $item['jenis_ewallet'] ?? ''), $search)
                     || str_contains(strtolower($item['nomor_rekening_tujuan'] ?? $item['nomor_rekening'] ?? $item['nomor_ewallet'] ?? $item['nomor_tujuan'] ?? $item['nomor_pelanggan'] ?? $item['nomor_hp'] ?? ''), $search);
             })->values()->toArray();
         }

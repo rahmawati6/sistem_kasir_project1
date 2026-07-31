@@ -19,6 +19,7 @@ class PulsaController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'operator' => 'required',
             'jenis_layanan' => 'required|in:pulsa,paket_data',
             'nomor_tujuan' => 'required',
@@ -26,6 +27,7 @@ class PulsaController extends Controller
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'harga' => 'required|numeric|min:1',
         ], [
+            'provider.required' => 'Provider transaksi wajib diisi.',
             'operator.required' => 'Operator wajib dipilih.',
             'jenis_layanan.required' => 'Jenis layanan wajib dipilih.',
             'jenis_layanan.in' => 'Jenis layanan tidak valid.',
@@ -61,6 +63,7 @@ class PulsaController extends Controller
     {
         $p = TransaksiPulsa::findOrFail($id);
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'operator' => 'required',
             'jenis_layanan' => 'required|in:pulsa,paket_data',
             'nomor_tujuan' => 'required',

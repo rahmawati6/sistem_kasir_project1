@@ -1,0 +1,1 @@
+var e=e=>String(e??``).replace(/[^\d]/g,``),t=t=>Number(e(t)||0),n=t=>{let n=e(t);return n?new Intl.NumberFormat(`id-ID`).format(Number(n)):``};export{t as n,n as t};

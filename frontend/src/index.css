@@ -36,6 +36,7 @@ button { cursor: pointer; }
   body.receipt-print-mode {
     margin: 0 !important;
     background: #fff !important;
+    overflow: visible !important;
   }
 
   body.receipt-print-mode .app-sidebar,
@@ -48,11 +49,17 @@ button { cursor: pointer; }
     display: none !important;
   }
 
+  body.receipt-print-mode .brilink-page > :not(.modal-root) {
+    display: none !important;
+  }
+
   body.receipt-print-mode .modal-root {
     position: static !important;
     display: block !important;
     padding: 0 !important;
     background: #fff !important;
+    width: 80mm !important;
+    box-sizing: border-box !important;
   }
 
   body.receipt-print-mode .modal-dialog {
@@ -65,6 +72,7 @@ button { cursor: pointer; }
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
+    box-sizing: border-box !important;
   }
 
   body.receipt-print-mode .modal-body,
@@ -75,15 +83,45 @@ button { cursor: pointer; }
 
   body.receipt-print-mode .receipt-print-area {
     position: static !important;
-    width: 80mm !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
     min-height: auto !important;
-    margin: 0 !important;
-    padding: 7mm 6mm !important;
+    margin: 0 auto !important;
+    padding: 6mm 4mm !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
     color: #000 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  body.receipt-print-mode .receipt-print-area * {
+    box-sizing: border-box !important;
+  }
+
+  body.receipt-print-mode .receipt-store em {
+    padding: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  body.receipt-print-mode .receipt-grand-total {
+    border-color: #000 !important;
+  }
+
+  body.receipt-print-mode .receipt-meta div,
+  body.receipt-print-mode .receipt-total-row,
+  body.receipt-print-mode .receipt-info-item div {
+    gap: 8px !important;
+  }
+
+  body.receipt-print-mode .receipt-meta strong,
+  body.receipt-print-mode .receipt-total-row strong,
+  body.receipt-print-mode .receipt-info-item span {
+    max-width: 42mm !important;
+    overflow-wrap: anywhere !important;
   }
 
   body.report-print-mode * {
@@ -2798,41 +2836,41 @@ button { cursor: pointer; }
   padding: 16px;
   border-radius: 14px;
   display: grid;
-  grid-template-columns: 150px 1fr;
+  grid-template-columns: 220px 1fr;
   gap: 16px;
   align-items: center;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
 
-.fake-qris {
-  width: 150px;
+.qris-placeholder {
+  width: 220px;
   aspect-ratio: 1;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 14px;
+  padding: 18px;
   border-radius: 12px;
-  background:
-    linear-gradient(90deg, #111827 50%, transparent 50%) 0 0 / 18px 18px,
-    #fff;
-  border: 8px solid #fff;
+  color: #64748b;
+  background: #fff;
+  border: 1px dashed #cbd5e1;
   box-shadow: inset 0 0 0 1px #cbd5e1, 0 14px 30px rgba(15, 23, 42, 0.12);
 }
 
-.fake-qris span {
-  border: 8px solid #111827;
-  border-radius: 8px;
-  background: #fff;
+.qris-placeholder span {
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .midtrans-qris-image {
-  width: 150px;
-  height: 150px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
   border-radius: 12px;
   background: #fff;
-  border: 1px solid #cbd5e1;
+  border: 10px solid #fff;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
 }
 
@@ -2848,6 +2886,29 @@ button { cursor: pointer; }
   color: #64748b;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.qris-app-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.qris-app-list span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #0f766e;
+  background: #ccfbf1;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.qris-app-note {
+  margin-top: 10px;
 }
 
 .qris-status {
@@ -2909,14 +2970,14 @@ button { cursor: pointer; }
 .receipt-print-area {
   width: min(100%, 330px);
   margin: 0 auto;
-  padding: 18px 16px;
+  padding: 20px 17px;
   color: #111827;
   background:
     linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(135deg, #2563eb, #0f766e, #f97316) border-box;
+    linear-gradient(135deg, #1d4ed8, #0f766e, #f59e0b) border-box;
   border: 1px solid transparent;
-  border-radius: 14px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
   font-family: 'Inter', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -2924,12 +2985,12 @@ button { cursor: pointer; }
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .receipt-store strong {
   color: #0b3b7c;
-  font-size: 22px;
+  font-size: 23px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0;
@@ -2941,15 +3002,27 @@ button { cursor: pointer; }
   line-height: 1.35;
 }
 
+.receipt-store em {
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #0f172a;
+  background: #f1f5f9;
+  font-size: 10px;
+  line-height: 1.2;
+  font-style: normal;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
 .receipt-divider {
   height: 1px;
-  margin: 13px 0;
-  background: repeating-linear-gradient(90deg, #94a3b8 0 8px, transparent 8px 14px);
+  margin: 14px 0;
+  background: repeating-linear-gradient(90deg, #94a3b8 0 7px, transparent 7px 12px);
 }
 
 .receipt-meta {
   display: grid;
-  gap: 7px;
+  gap: 8px;
 }
 
 .receipt-meta div,
@@ -2965,7 +3038,7 @@ button { cursor: pointer; }
   flex: 0 0 auto;
   color: #64748b;
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .receipt-meta strong,
@@ -2976,9 +3049,17 @@ button { cursor: pointer; }
   text-align: right;
 }
 
+.receipt-section-label {
+  margin-bottom: 9px;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .receipt-items {
   display: grid;
-  gap: 10px;
+  gap: 11px;
 }
 
 .receipt-item {
@@ -3003,7 +3084,9 @@ button { cursor: pointer; }
   display: block;
   margin-top: 2px;
   color: #64748b;
-  font-size: 10px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .receipt-item p {
@@ -3021,8 +3104,34 @@ button { cursor: pointer; }
   text-align: right;
 }
 
+.receipt-info-item {
+  grid-template-columns: 1fr;
+}
+
+.receipt-info-item div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-info-item strong {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.receipt-info-item span {
+  margin-top: 0;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: right;
+}
+
 .receipt-total-row {
-  padding: 3px 0;
+  padding: 4px 0;
 }
 
 .receipt-total-row:first-of-type {
@@ -3033,9 +3142,23 @@ button { cursor: pointer; }
   font-size: 13px;
 }
 
+.receipt-grand-total {
+  margin: 4px -2px;
+  padding: 8px 2px;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.receipt-grand-total span,
+.receipt-grand-total strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .receipt-footer {
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: 15px;
+  padding-top: 13px;
   border-top: 1px solid #e2e8f0;
   text-align: center;
 }
@@ -3317,6 +3440,16 @@ button { cursor: pointer; }
   background: #dbeafe;
 }
 
+.payment-pill.pengembalian_dana {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.payment-pill.penggantian_barang {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+
 .status-pill.paid {
   color: #047857;
   background: #d1fae5;
@@ -3351,6 +3484,17 @@ button { cursor: pointer; }
   margin-top: 6px;
   color: #64748b;
   font-size: 13px;
+}
+
+.report-empty.error svg,
+.report-empty.error p {
+  color: #dc2626;
+}
+
+.report-empty.error span {
+  max-width: 620px;
+  color: #b91c1c;
+  line-height: 1.5;
 }
 
 .brilink-page {
@@ -3928,6 +4072,42 @@ button { cursor: pointer; }
 .money-cell.minus {
   color: #dc2626;
   font-weight: 850;
+}
+
+.inventory-table th.money-header,
+.report-table th.money-header,
+.brilink-table th.money-header,
+.inventory-table td.money-cell,
+.report-table td.money-cell,
+.brilink-table td.money-cell {
+  text-align: right;
+  min-width: 126px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-table th.money-header,
+.report-table th.money-header,
+.brilink-table th.money-header {
+  color: #334155;
+}
+
+.ewallet-table {
+  table-layout: fixed;
+}
+
+.ewallet-code-col { width: 18%; }
+.ewallet-date-col { width: 12%; }
+.ewallet-type-col { width: 10%; }
+.ewallet-provider-col { width: 12%; }
+.ewallet-number-col { width: 18%; }
+.ewallet-money-col { width: 10%; }
+
+.ewallet-table th:nth-last-child(-n + 3),
+.ewallet-table td:nth-last-child(-n + 3) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .table-actions {

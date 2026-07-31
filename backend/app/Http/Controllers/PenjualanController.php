@@ -286,7 +286,7 @@ class PenjualanController extends Controller
             'jumlah' => 'required|integer|min:1',
             'alasan_retur' => 'required_without:alasan|nullable|in:Barang Rusak,Barang Cacat,Salah Barang,Tidak Sesuai Pesanan,Tidak Berfungsi,Lainnya',
             'alasan' => 'required_without:alasan_retur|nullable|string|min:3',
-            'metode_pengembalian_dana' => 'required_without:alasan|nullable|in:tunai,qris',
+            'metode_pengembalian_dana' => 'required_without:alasan|nullable|in:pengembalian_dana,penggantian_barang,tunai,qris',
             'keterangan' => 'nullable|string',
         ], [
             'detail_penjualan_id.required_without' => 'Data transaksi harus valid.',
@@ -295,8 +295,8 @@ class PenjualanController extends Controller
             'jumlah.min' => 'Jumlah retur wajib lebih dari 0.',
             'alasan_retur.required_without' => 'Alasan retur wajib dipilih.',
             'alasan_retur.in' => 'Alasan retur tidak valid.',
-            'metode_pengembalian_dana.required_without' => 'Metode pengembalian dana wajib dipilih.',
-            'metode_pengembalian_dana.in' => 'Metode pengembalian dana tidak valid.',
+            'metode_pengembalian_dana.required_without' => 'Penyelesaian retur wajib dipilih.',
+            'metode_pengembalian_dana.in' => 'Penyelesaian retur tidak valid.',
         ]);
 
         $retur = DB::transaction(function () use ($data, $id) {
@@ -328,8 +328,10 @@ class PenjualanController extends Controller
             }
 
             $barang = Barang::lockForUpdate()->findOrFail($detail->barang_id);
-            $barang->stok += (int) $data['jumlah'];
-            $barang->save();
+            if ($metodePengembalianDana !== 'penggantian_barang') {
+                $barang->stok += (int) $data['jumlah'];
+                $barang->save();
+            }
 
             return ReturPelanggan::create([
                 'nomor_retur' => $this->generateNomorReturPelanggan(),
@@ -348,17 +350,22 @@ class PenjualanController extends Controller
             ])->load(['barang', 'transaksi']);
         });
 
-        $metodeLabel = $retur->metode_pengembalian_dana === 'qris' ? 'QRIS' : 'Tunai';
+        $metodeLabel = match ($retur->metode_pengembalian_dana) {
+            'penggantian_barang' => 'Penggantian Barang',
+            'pengembalian_dana' => 'Pengembalian Dana',
+            'qris' => 'QRIS',
+            default => 'Tunai',
+        };
 
         ActivityLog::record(
             'Retur Pelanggan',
             'create',
-            'Admin membuat retur pelanggan untuk barang ' . $retur->nama_barang . ' sebanyak ' . $retur->jumlah_retur . ' pcs dengan alasan ' . $retur->alasan_retur . ' dan pengembalian dana melalui ' . $metodeLabel . '.',
+            'Admin membuat retur pelanggan untuk barang ' . $retur->nama_barang . ' sebanyak ' . $retur->jumlah_retur . ' pcs dengan alasan ' . $retur->alasan_retur . ' dan penyelesaian retur ' . $metodeLabel . '.',
             $retur->toArray()
         );
 
         return response()->json([
-            'message' => 'Retur berhasil dicatat dan stok dikembalikan',
+            'message' => 'Retur berhasil dicatat dan stok diperbarui',
             'retur' => $retur,
         ]);
     }

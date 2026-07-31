@@ -4,6 +4,8 @@ import Modal from '../Common/Modal'
 import { formatRupiah } from '../../utils/formatRupiah'
 import { formatNominalInput } from '../../utils/nominalInput'
 
+const qrisSupportedApps = ['GoPay', 'ShopeePay', 'DANA', 'OVO', 'Mobile Banking']
+
 export default function SalesPaymentModal({
   isOpen,
   onClose,
@@ -78,44 +80,51 @@ export default function SalesPaymentModal({
           <div className="qris-payment">
             <div className="qris-box">
               {qrisData?.qris_url ? (
-                <img src={qrisData.qris_url} alt="QRIS Midtrans" className="midtrans-qris-image" />
+                <img src={qrisData.qris_url} alt="QRIS Midtrans" className="midtrans-qris-image" loading="eager" />
               ) : (
-                <div className="fake-qris">
-                  <span></span><span></span><span></span><span></span>
+                <div className="qris-placeholder">
+                  <QrCode size={48} />
+                  <span>QRIS belum dibuat</span>
                 </div>
               )}
               <div>
-                <h3>{qrisData?.order_id ? 'Midtrans QRIS Sandbox' : 'Sultan Cell QRIS'}</h3>
-                <p>{qrisData?.order_id ? `Order ID: ${qrisData.order_id}` : 'Scan QRIS ini dari aplikasi pembayaran pelanggan, lalu konfirmasi jika pembayaran sudah masuk.'}</p>
+                <h3>QRIS Sultan Cell</h3>
+                <p>{qrisData?.order_id ? `Nomor pembayaran: ${qrisData.order_id}` : 'QRIS akan tampil otomatis setelah dibuat.'}</p>
+                <div className="qris-app-list" aria-label="Aplikasi yang mendukung scan QRIS">
+                  {qrisSupportedApps.map(app => <span key={app}>{app}</span>)}
+                </div>
+                <p className="qris-app-note">Satu QRIS ini dapat discan dari aplikasi pembayaran pelanggan yang mendukung QRIS.</p>
               </div>
             </div>
-            {qrisLoading && <div className="qris-status"><QrCode size={20} /><span>Membuat QRIS Midtrans...</span></div>}
+            {qrisLoading && <div className="qris-status"><QrCode size={20} /><span>Membuat QRIS pembayaran...</span></div>}
             {qrisError && <div className="scanner-warning">{qrisError}</div>}
             {qrisData?.order_id && (
               <div className={`qris-midtrans-status ${isQrisPaid ? 'paid' : ''}`}>
-                <span>Status Midtrans</span>
+                <span>Status Pembayaran</span>
                 <strong>{formatQrisStatus(qrisStatus)}</strong>
               </div>
             )}
             <div className="qris-status">
               <CheckCircle2 size={20} />
-              <span>Untuk sandbox, bayar dari simulator Midtrans lalu tekan cek status sebelum konfirmasi.</span>
+              <span>{isQrisPaid ? 'Pembayaran diterima. Nota akan muncul otomatis.' : 'Scan QRIS menggunakan GoPay, ShopeePay, mobile banking, atau e-wallet lain yang mendukung QRIS. Sistem akan menyimpan transaksi otomatis setelah pembayaran berhasil.'}</span>
             </div>
             <button type="button" onClick={onCreateQris} disabled={qrisLoading} className="secondary-button">
-              {qrisLoading ? 'Memuat QRIS...' : 'Buat Ulang QRIS Midtrans'}
+              {qrisLoading ? 'Memuat QRIS...' : 'Buat Ulang QRIS'}
             </button>
             <button type="button" onClick={onCopyQrisUrl} disabled={!qrisData?.qris_url} className="secondary-button">
               Salin URL QRIS
             </button>
             <button type="button" onClick={onOpenSimulator} className="secondary-button">
-              Buka Simulator Midtrans
+              Buka Simulator Pembayaran
             </button>
             <button type="button" onClick={() => onCheckQrisStatus(true)} disabled={qrisChecking || !qrisData?.order_id} className="secondary-button">
               {qrisChecking ? 'Mengecek...' : 'Cek Status Pembayaran'}
             </button>
-            <button onClick={() => onCheckout('qris')} disabled={loading || !isQrisPaid} className="confirm-payment-button qris">
-              {loading ? 'Memproses...' : 'Konfirmasi QRIS Sudah Dibayar'}
-            </button>
+            {loading && (
+              <button type="button" disabled className="confirm-payment-button qris">
+                Memproses transaksi otomatis...
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -29,7 +29,7 @@ export default function SalesReceiptModal({ isOpen, onClose, receipt }) {
             <div className="receipt-store">
               <strong>SULTAN CELL</strong>
               <span>Konter HP & Agen BRILink</span>
-              <span>Kasir, stok barang, dan layanan BRILink</span>
+              <em>Struk Transaksi Penjualan</em>
             </div>
 
             <div className="receipt-divider"></div>
@@ -43,6 +43,7 @@ export default function SalesReceiptModal({ isOpen, onClose, receipt }) {
 
             <div className="receipt-divider"></div>
 
+            <div className="receipt-section-label">Daftar Barang</div>
             <div className="receipt-items">
               {receipt.items.map(item => (
                 <div key={`${item.id}-${item.kode_barang}`} className="receipt-item">
@@ -58,7 +59,7 @@ export default function SalesReceiptModal({ isOpen, onClose, receipt }) {
 
             <div className="receipt-divider"></div>
 
-            <div className="receipt-total-row">
+            <div className="receipt-total-row receipt-grand-total">
               <span>Total</span>
               <strong>{formatRupiah(receipt.total)}</strong>
             </div>
@@ -73,7 +74,7 @@ export default function SalesReceiptModal({ isOpen, onClose, receipt }) {
 
             <div className="receipt-footer">
               <p>Terima kasih sudah berbelanja</p>
-              <span>Barang yang sudah dibeli harap dicek kembali.</span>
+              <span>Simpan struk ini sebagai bukti transaksi.</span>
             </div>
           </div>
 

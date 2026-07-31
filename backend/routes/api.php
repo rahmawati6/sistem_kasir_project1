@@ -18,6 +18,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\PengeluaranTokoController;
 use App\Http\Controllers\ReturSupplierController;
+use App\Http\Controllers\ProviderController;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -52,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/laporan/penjualan/reset', [LaporanController::class, 'resetPenjualan']);
 
     // BRILink
+    Route::get('/providers', [ProviderController::class, 'index']);
     Route::apiResource('transfer', TransferController::class);
     Route::apiResource('tarik-tunai', TarikTunaiController::class);
     Route::apiResource('setor-tunai', SetorTunaiController::class);

@@ -5,16 +5,20 @@ import { formatNominalInput, parseNominalInput } from '../utils/nominalInput'
 import { getLabelJenisNasabah } from '../utils/brilinkNasabah'
 import { useBiayaAdminBrilink } from '../hooks/useBiayaAdminBrilink'
 import NasabahKartuFields from '../components/Brilink/NasabahKartuFields'
+import ProviderFields, { normalizeProvider } from '../components/Brilink/ProviderFields'
+import BrilinkReceiptModal from '../components/Brilink/BrilinkReceiptModal'
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 
-const emptyForm = { jenis_setoran: 'biasa', jenis_nasabah: 'internal', nomor_rekening_tujuan: '', nama_pemilik_rekening: '', bank_tujuan: '', nominal_setor: '', sumber_dana: '', keterangan: '' }
+const emptyForm = { provider: 'BRILink Mobile', nama_provider: '', jenis_setoran: 'biasa', jenis_nasabah: 'internal', nomor_rekening_tujuan: '', nama_pemilik_rekening: '', bank_tujuan: '', nominal_setor: '', sumber_dana: '', keterangan: '' }
 
 export default function SetorTunai() {
   const [data, setData] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [receipt, setReceipt] = useState(null)
+  const [showReceipt, setShowReceipt] = useState(false)
   const { hitung } = useBiayaAdminBrilink()
 
   useEffect(() => { fetchData() }, [])
@@ -23,8 +27,10 @@ export default function SetorTunai() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true)
     try {
-      await api.post('/setor-tunai', { ...form, nominal_setor: parseNominalInput(form.nominal_setor) })
+      const res = await api.post('/setor-tunai', { ...form, provider: normalizeProvider(form), nominal_setor: parseNominalInput(form.nominal_setor) })
       toast.success('Setor tunai berhasil!')
+      setReceipt({ type: 'setor_tunai', data: res.data })
+      setShowReceipt(true)
       fetchData(); setShowForm(false); setForm(emptyForm)
     } catch (e) { toast.error(getApiErrorMessage(e, 'Gagal menyimpan setor tunai')) } finally { setLoading(false) }
   }
@@ -51,6 +57,7 @@ export default function SetorTunai() {
         <section className="brilink-form-card">
           <div className="brilink-section-title"><HandCoins size={20} /><div><h2>Form Setor Tunai</h2><p>Lengkapi tujuan rekening dan nominal setoran.</p></div></div>
           <form onSubmit={handleSubmit} className="brilink-form-grid">
+            <ProviderFields form={form} setForm={setForm} />
             <label className="field-group"><span>Jenis Setoran</span><select value={form.jenis_setoran} onChange={e => setForm({ ...form, jenis_setoran: e.target.value })}><option value="biasa">Biasa</option><option value="tabungan">Tabungan</option></select></label>
             <NasabahKartuFields value={form.jenis_nasabah} onChange={jenisNasabah => setForm({ ...form, jenis_nasabah: jenisNasabah })} />
             <label className="field-group"><span>No. Rekening Tujuan</span><input type="text" value={form.nomor_rekening_tujuan} onChange={e => setForm({ ...form, nomor_rekening_tujuan: e.target.value })} /></label>
@@ -69,10 +76,10 @@ export default function SetorTunai() {
         <div className="brilink-table-header"><div><h2>Riwayat Setor Tunai</h2><p>{data.length} transaksi tercatat</p></div></div>
         <div className="brilink-table-wrap">
           <table className="brilink-table">
-            <thead><tr><th>Kode</th><th>Tanggal</th><th>Jenis</th><th>Nasabah</th><th>Pemilik Rekening</th><th>Nominal</th><th>Admin</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Kode</th><th>Tanggal</th><th>Provider</th><th>Jenis</th><th>Nasabah</th><th>Pemilik Rekening</th><th className="money-header">Nominal</th><th className="money-header">Admin</th><th className="money-header">Total</th><th>Status</th></tr></thead>
             <tbody>{data.map(t => (
               <tr key={t.id}>
-                <td><span className="item-code">{t.kode_transaksi}</span></td><td>{new Date(t.tanggal).toLocaleDateString('id-ID')}</td><td><span className="service-pill green">{t.jenis_setoran}</span></td>
+                <td><span className="item-code">{t.kode_transaksi}</span></td><td>{new Date(t.tanggal).toLocaleDateString('id-ID')}</td><td><span className="service-pill green">{t.provider || '-'}</span></td><td><span className="service-pill green">{t.jenis_setoran}</span></td>
                 <td><div className="person-cell"><strong>{getLabelJenisNasabah(t.jenis_nasabah)}</strong><span>{t.jenis_kartu || '-'}</span></div></td>
                 <td><div className="person-cell"><strong>{t.nama_pemilik_rekening || '-'}</strong><span>{t.nomor_rekening_tujuan || t.bank_tujuan || '-'}</span></div></td>
                 <td className="money-cell">{formatRupiah(t.nominal_setor)}</td><td className="money-cell admin">{formatRupiah(t.biaya_admin)}</td><td className="money-cell strong">{formatRupiah(t.total_bayar)}</td>
@@ -83,6 +90,12 @@ export default function SetorTunai() {
           {data.length === 0 && <div className="brilink-empty"><HandCoins size={42} /><p>Belum ada data setor tunai</p><span>Transaksi baru akan muncul di sini.</span></div>}
         </div>
       </section>
+
+      <BrilinkReceiptModal
+        isOpen={showReceipt}
+        receipt={receipt}
+        onClose={() => setShowReceipt(false)}
+      />
     </div>
   )
 }

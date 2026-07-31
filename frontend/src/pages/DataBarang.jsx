@@ -343,8 +343,8 @@ export default function DataBarang() {
                 <th>Nama Barang</th>
                 <th>Kategori</th>
                 <th>Stok</th>
-                <th>Harga Beli</th>
-                <th>Harga Jual</th>
+                <th className="money-header">Harga Beli</th>
+                <th className="money-header">Harga Jual</th>
                 <th>Aksi</th>
               </tr>
             </thead>

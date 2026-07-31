@@ -15,7 +15,10 @@ const alasanOptions = [
   'Lainnya',
 ]
 
-const metodeOptions = ['Tunai', 'QRIS']
+const penyelesaianOptions = [
+  { value: 'pengembalian_dana', label: 'Pengembalian Dana' },
+  { value: 'penggantian_barang', label: 'Penggantian Barang' },
+]
 
 const formatDateTime = (value) => {
   if (!value) return '-'
@@ -34,22 +37,24 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
   const [selectedDetailId, setSelectedDetailId] = useState('')
   const [jumlahRetur, setJumlahRetur] = useState('1')
   const [alasanRetur, setAlasanRetur] = useState('')
-  const [metodePengembalianDana, setMetodePengembalianDana] = useState('')
+  const [penyelesaianRetur, setPenyelesaianRetur] = useState('')
   const [keterangan, setKeterangan] = useState('')
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
     if (!open || !transaction) return
-    setSelectedDetailId(String(transaction.details?.[0]?.id || ''))
+    const availableDetail = transaction.details?.find(item => Number(item.jumlah_bisa_retur ?? item.jumlah ?? 0) > 0)
+    setSelectedDetailId(String(availableDetail?.id || transaction.details?.[0]?.id || ''))
     setJumlahRetur('1')
     setAlasanRetur('')
-    setMetodePengembalianDana('')
+    setPenyelesaianRetur('')
     setKeterangan('')
     setErrors({})
   }, [open, transaction])
 
   const selectedDetail = details.find(item => String(item.id) === String(selectedDetailId)) || details[0]
   const jumlahDibeli = Number(selectedDetail?.jumlah || 0)
+  const jumlahBisaRetur = Number(selectedDetail?.jumlah_bisa_retur ?? jumlahDibeli)
 
   const validate = () => {
     const nextErrors = {}
@@ -60,14 +65,14 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
     }
     if (!jumlah || jumlah <= 0) {
       nextErrors.jumlahRetur = 'Jumlah retur wajib lebih dari 0.'
-    } else if (jumlah > jumlahDibeli) {
-      nextErrors.jumlahRetur = 'Jumlah retur tidak boleh melebihi jumlah yang dibeli.'
+    } else if (jumlah > jumlahBisaRetur) {
+      nextErrors.jumlahRetur = `Jumlah retur tidak boleh melebihi sisa barang yang bisa diretur (${jumlahBisaRetur} pcs).`
     }
     if (!alasanRetur) {
       nextErrors.alasanRetur = 'Alasan retur wajib dipilih.'
     }
-    if (!metodePengembalianDana) {
-      nextErrors.metodePengembalianDana = 'Metode pengembalian dana wajib dipilih.'
+    if (!penyelesaianRetur) {
+      nextErrors.penyelesaianRetur = 'Penyelesaian retur wajib dipilih.'
     }
 
     setErrors(nextErrors)
@@ -82,7 +87,7 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
       detail_penjualan_id: selectedDetail.id,
       jumlah: Number(jumlahRetur),
       alasan_retur: alasanRetur,
-      metode_pengembalian_dana: metodePengembalianDana.toLowerCase(),
+      metode_pengembalian_dana: penyelesaianRetur,
       keterangan: keterangan.trim() || null,
     })
   }
@@ -116,6 +121,9 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
                 <div className="return-info-item"><span>Nama Barang</span><strong>{selectedDetail?.nama_barang || '-'}</strong></div>
                 <div className="return-info-item"><span>Kode Barang</span><strong>{selectedDetail?.kode_barang || '-'}</strong></div>
                 <div className="return-info-item"><span>Jumlah Dibeli</span><strong>{jumlahDibeli} pcs</strong></div>
+                {selectedDetail?.jumlah_sudah_retur !== undefined && (
+                  <div className="return-info-item"><span>Sudah Diretur</span><strong>{Number(selectedDetail.jumlah_sudah_retur || 0)} pcs</strong></div>
+                )}
                 <div className="return-info-item"><span>Metode Pembayaran</span><strong>{transaction.metode_pembayaran?.toUpperCase() || '-'}</strong></div>
                 <div className="return-info-item full"><span>Total Transaksi</span><strong>{formatRupiah(transaction.total_harga)}</strong></div>
               </div>
@@ -124,7 +132,7 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
             <section className="customer-return-panel">
               <div className="customer-return-section-title">
                 <span>Form Retur</span>
-                <p>Stok barang akan bertambah setelah retur berhasil disimpan.</p>
+                <p>Stok barang akan diperbarui sesuai penyelesaian retur setelah data disimpan.</p>
               </div>
 
               <div className="return-form-grid">
@@ -133,7 +141,7 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
                   <Input
                     type="number"
                     min="1"
-                    max={jumlahDibeli || 1}
+                    max={jumlahBisaRetur || 1}
                     value={jumlahRetur}
                     onChange={event => setJumlahRetur(event.target.value)}
                     placeholder="Masukkan jumlah retur"
@@ -151,12 +159,12 @@ export default function CustomerReturnModal({ open, transaction, loading, onClos
                 </label>
 
                 <label className="field-group">
-                  <span>Metode Pengembalian Dana</span>
-                  <Select value={metodePengembalianDana} onChange={event => setMetodePengembalianDana(event.target.value)}>
-                    <option value="">Pilih metode</option>
-                    {metodeOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                  <span>Penyelesaian Retur</span>
+                  <Select value={penyelesaianRetur} onChange={event => setPenyelesaianRetur(event.target.value)}>
+                    <option value="">Pilih penyelesaian</option>
+                    {penyelesaianOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </Select>
-                  {errors.metodePengembalianDana && <small className="field-error">{errors.metodePengembalianDana}</small>}
+                  {errors.penyelesaianRetur && <small className="field-error">{errors.penyelesaianRetur}</small>}
                 </label>
 
                 <label className="field-group full">

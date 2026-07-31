@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Provider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +14,7 @@ class BackupController extends Controller
         'barang', 'transaksi_penjualan', 'detail_penjualan', 'pembayaran_qris', 'transaksi_transfer',
         'transaksi_tarik_tunai', 'transaksi_setor_tunai',
         'pembayaran_tagihan', 'transaksi_pulsa', 'transaksi_ewallet',
-        'biaya_admin', 'biaya_admin_brilink', 'activity_logs', 'pengeluaran_toko',
+        'biaya_admin', 'biaya_admin_brilink', 'providers', 'activity_logs', 'pengeluaran_toko',
         'retur_penjualan', 'retur_pelanggan', 'retur_supplier',
     ];
 
@@ -26,6 +27,7 @@ class BackupController extends Controller
     private array $optionalRestoreTables = [
         'retur_supplier',
         'retur_pelanggan',
+        'providers',
     ];
 
     public function download()
@@ -99,6 +101,9 @@ class BackupController extends Controller
         });
 
         ActivityLog::record('Backup', 'restore', 'Restore backup data website');
+        if (Schema::hasTable('providers')) {
+            Provider::ensureDefaults();
+        }
 
         return response()->json(['message' => 'Restore backup berhasil']);
     }

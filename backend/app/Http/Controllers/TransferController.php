@@ -19,6 +19,7 @@ class TransferController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'jenis_transfer' => 'required',
             'bank_tujuan' => 'required|string|max:100',
             'nomor_rekening_tujuan' => 'required',
@@ -26,6 +27,7 @@ class TransferController extends Controller
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_transfer' => 'required|numeric|min:1',
         ], [
+            'provider.required' => 'Provider transaksi wajib diisi.',
             'jenis_transfer.required' => 'Jenis transfer wajib dipilih.',
             'bank_tujuan.required' => 'Bank atau tujuan transfer wajib diisi.',
             'nomor_rekening_tujuan.required' => 'Nomor rekening tujuan wajib diisi.',
@@ -60,6 +62,7 @@ class TransferController extends Controller
     {
         $t = TransaksiTransfer::findOrFail($id);
         $data = $request->validate([
+            'provider' => 'required|string|max:100',
             'jenis_transfer' => 'required',
             'bank_tujuan' => 'required|string|max:100',
             'nomor_rekening_tujuan' => 'required',

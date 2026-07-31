@@ -53,7 +53,7 @@ class LaporanController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'search' => 'nullable|string',
             'alasan' => 'nullable|string',
-            'metode' => 'nullable|in:semua,tunai,qris',
+            'metode' => 'nullable|in:semua,pengembalian_dana,penggantian_barang,tunai,qris',
         ]);
 
         $startDate = $filters['start_date'] ?? Carbon::now()->startOfMonth()->toDateString();
