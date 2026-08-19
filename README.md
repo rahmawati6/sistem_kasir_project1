@@ -167,6 +167,77 @@ Buka website:
 http://localhost:5173
 ```
 
+## Cara Menjalankan dengan Docker
+
+### 1. Persiapan
+
+Buat file environment Docker:
+
+```bash
+copy docker.env.example .env
+```
+
+Lalu sesuaikan isi `.env` bila perlu (port, password database, token tunnel).
+
+### 2. Build dan Jalankan
+
+```bash
+docker compose up -d --build
+```
+
+Perintah ini otomatis:
+
+- Membuild image (frontend React + backend Laravel + Apache)
+- Menjalankan MySQL dengan database `sistem_project1`
+- Menjalankan migrasi dan seeder (akun `admin` / `admin123`)
+- Menjalankan Cloudflared tunnel
+
+Buka aplikasi:
+
+```text
+http://localhost:8080
+```
+
+### 3. Cloudflared
+
+Tanpa `TUNNEL_TOKEN` (default), cloudflared membuat Quick Tunnel dengan URL acak:
+
+```bash
+docker compose logs -f cloudflared
+```
+
+Cari baris seperti ini di log, lalu buka URL tersebut:
+
+```text
+https://xxxx-xxxx.trycloudflare.com
+```
+
+Untuk tunnel permanen, buat tunnel di dashboard Cloudflare, lalu set di file `.env`:
+
+```text
+TUNNEL_TOKEN=eyJhIjoi...
+```
+
+Lalu restart cloudflared:
+
+```bash
+docker compose up -d cloudflared
+```
+
+### 4. Perintah Lain yang Sering Dipakai
+
+```bash
+docker compose ps          # lihat status container
+docker compose logs -f app # lihat log aplikasi
+docker compose down        # stop semua container
+docker compose down -v     # stop + hapus volume data (HATI-HATI: db terhapus)
+docker compose exec db mysql -u sultan -p sistem_project1
+```
+
+### 5. Kustomisasi
+
+Semua pengaturan (port, database, tunnel) bisa diubah di file `.env`. Data MySQL disimpan dalam volume Docker `db_data`, dan file storage Laravel dalam volume `app_storage`, sehingga tetap aman saat container di-restart atau dibuild ulang.
+
 ## Akun Demo
 
 Seeder membuat akun admin berikut:

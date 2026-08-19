@@ -1,0 +1,78 @@
+name: sistem-kasir
+
+services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-sistem_project1}
+      MYSQL_USER: ${DB_USERNAME:-sultan}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-sultan123}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root123}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - kasir
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${APP_NAME:-Sultan Cell}
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-8080}}
+      APP_KEY: ${APP_KEY:-}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-sistem_project1}
+      DB_USERNAME: ${DB_USERNAME:-sultan}
+      DB_PASSWORD: ${DB_PASSWORD:-sultan123}
+      CACHE_DRIVER: ${CACHE_DRIVER:-file}
+      SESSION_DRIVER: ${SESSION_DRIVER:-file}
+    volumes:
+      - app_storage:/var/www/html/storage
+    ports:
+      - "${APP_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - kasir
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    volumes:
+      - ./docker/cloudflared/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["sh", "/entrypoint.sh"]
+    networks:
+      - kasir
+
+volumes:
+  db_data:
+  app_storage:
+
+networks:
+  kasir:
+    driver: bridge
