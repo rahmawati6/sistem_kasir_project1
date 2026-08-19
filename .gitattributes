@@ -1,0 +1,9 @@
+* text=auto
+
+# File-file yang WAJIB tetap LF (CRLF akan merusak script dan konfigurasi container)
+Dockerfile text eol=lf
+*.sh text eol=lf
+.dockerignore text eol=lf
+docker-compose.yml text eol=lf
+docker.env.example text eol=lf
+docker/** text eol=lf
