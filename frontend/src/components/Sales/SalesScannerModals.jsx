@@ -36,7 +36,7 @@ export default function SalesScannerModals({
             </div>
             {scannerError && <div className="scanner-warning">{scannerError}</div>}
             <form onSubmit={handleSubmit} className="manual-barcode">
-              <input value={manualBarcode} onChange={e => onManualBarcodeChange(e.target.value)} placeholder="Ketik kode barang manual, contoh HP001" />
+              <input maxLength={50} value={manualBarcode} onChange={e => onManualBarcodeChange(e.target.value)} placeholder="Ketik kode barang manual, contoh HP001" />
               <button type="submit">Tambah</button>
             </form>
           </div>
@@ -56,7 +56,7 @@ export default function SalesScannerModals({
             <form onSubmit={handleSubmit} className="usb-scanner-form">
               <label className="field-group">
                 <span>Kode dari Scanner USB</span>
-                <input autoFocus value={manualBarcode} onChange={e => onManualBarcodeChange(e.target.value)} placeholder="Scan barcode dengan alat USB..." />
+                <input autoFocus maxLength={50} value={manualBarcode} onChange={e => onManualBarcodeChange(e.target.value)} placeholder="Scan barcode dengan alat USB..." />
               </label>
               <button type="submit">
                 <Barcode size={18} />

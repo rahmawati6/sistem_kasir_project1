@@ -264,8 +264,8 @@ export default function ReturSupplier() {
           <label className="field-group"><span>Tanggal Mulai</span><input type="date" value={filters.start_date} onChange={e => setFilters({ ...filters, start_date: e.target.value })} /></label>
           <label className="field-group"><span>Tanggal Akhir</span><input type="date" value={filters.end_date} onChange={e => setFilters({ ...filters, end_date: e.target.value })} /></label>
           <label className="field-group"><span>Status</span><select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}><option value="semua">Semua</option><option value="diproses">Diproses</option><option value="diterima">Diterima</option><option value="ditolak">Ditolak</option></select></label>
-          <label className="field-group"><span>Supplier</span><input value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} placeholder="Nama supplier" /></label>
-          <label className="field-group"><span>Cari</span><input value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} onKeyDown={e => e.key === 'Enter' && fetchData()} placeholder="Nomor, kode, nama barang" /></label>
+          <label className="field-group"><span>Supplier</span><input maxLength={150} value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} placeholder="Nama supplier" /></label>
+          <label className="field-group"><span>Cari</span><input maxLength={150} value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} onKeyDown={e => e.key === 'Enter' && fetchData()} placeholder="Nomor, kode, nama barang" /></label>
           <button type="button" onClick={fetchData} className="filter-search-button"><Search size={17} />Cari</button>
         </section>
 
@@ -281,7 +281,7 @@ export default function ReturSupplier() {
             <div className="brilink-section-title"><RotateCcw size={20} /><div><h2>Form Retur Supplier</h2><p>Status awal selalu diproses. Stok baru dikurangi setelah status diubah menjadi diterima.</p></div></div>
             <form onSubmit={handleSubmit} className="brilink-form-grid">
               <label className="field-group"><span>Tanggal Retur</span><input type="date" value={form.tanggal_retur} onChange={e => setForm({ ...form, tanggal_retur: e.target.value })} required /></label>
-              <label className="field-group"><span>Nama Supplier</span><input value={form.nama_supplier} onChange={e => setForm({ ...form, nama_supplier: e.target.value })} required placeholder="Contoh: Supplier Aksesoris" /></label>
+              <label className="field-group"><span>Nama Supplier</span><input maxLength={150} value={form.nama_supplier} onChange={e => setForm({ ...form, nama_supplier: e.target.value })} required placeholder="Contoh: Supplier Aksesoris" /></label>
               <label className="field-group"><span>Barang</span><select value={form.barang_id} onChange={e => setForm({ ...form, barang_id: e.target.value })} required><option value="">Pilih barang</option>{barang.map(item => <option key={item.id} value={item.id}>{item.kode_barang} - {item.nama_barang} (stok {item.stok})</option>)}</select></label>
               <label className="field-group"><span>Stok Saat Ini</span><input value={selectedBarang ? `${selectedBarang.stok} pcs` : '-'} readOnly /></label>
               <label className="field-group"><span>Jumlah Retur</span><input type="number" min="1" value={form.jumlah_retur} onChange={e => setForm({ ...form, jumlah_retur: e.target.value })} required /></label>

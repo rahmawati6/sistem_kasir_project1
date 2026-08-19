@@ -25,7 +25,7 @@ export default function RiwayatAktivitas() {
         <div><span>Audit Sistem</span><h1>Riwayat Aktivitas</h1><p>Lihat aktivitas penting seperti transaksi, stok, backup, dan pengaturan.</p></div>
       </div>
       <section className="brilink-filter-panel activity-filter-panel">
-        <label className="field-group"><span>Cari Aktivitas</span><input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchData()} placeholder="Cari modul, aksi, atau keterangan" /></label>
+        <label className="field-group"><span>Cari Aktivitas</span><input maxLength={100} value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchData()} placeholder="Cari modul, aksi, atau keterangan" /></label>
         <label className="field-group"><span>Modul</span><select value={module} onChange={e => setModule(e.target.value)}><option value="semua">Semua</option><option>Barang</option><option>Penjualan</option><option>E-Wallet</option><option>Pengeluaran</option><option>Backup</option><option>Biaya Admin</option><option>Auth</option><option>Midtrans</option></select></label>
         <button type="button" onClick={fetchData} className="filter-search-button"><Search size={17} />Cari</button>
       </section>

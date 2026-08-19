@@ -12,7 +12,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $data = $request->validate([
-            'username' => 'required',
+            'username' => 'required|string|max:191',
             'password' => 'required',
         ]);
 
@@ -34,7 +34,7 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $data = $request->validate([
-            'username' => 'required',
+            'username' => 'required|string|max:191',
             'password' => 'required|min:6|confirmed',
         ]);
 

@@ -181,7 +181,7 @@ export default function Login() {
               <span>Username</span>
               <div className={`input-with-icon ${usernameError ? 'has-error' : ''}`}>
                 <User size={20} />
-                <input type="text" value={username} onChange={e => { setUsername(e.target.value); setUsernameError('') }} placeholder="Masukkan username" required />
+                <input type="text" maxLength={191} value={username} onChange={e => { setUsername(e.target.value); setUsernameError('') }} placeholder="Masukkan username" required />
               </div>
               {usernameError && <p className="field-warning animate-fadeIn">{usernameError}</p>}
             </label>

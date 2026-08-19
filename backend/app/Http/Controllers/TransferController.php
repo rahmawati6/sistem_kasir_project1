@@ -20,10 +20,10 @@ class TransferController extends Controller
     {
         $data = $request->validate([
             'provider' => 'required|string|max:100',
-            'jenis_transfer' => 'required',
+            'jenis_transfer' => 'required|string|max:50',
             'bank_tujuan' => 'required|string|max:100',
-            'nomor_rekening_tujuan' => 'required',
-            'nama_penerima' => 'required',
+            'nomor_rekening_tujuan' => 'required|string|max:30',
+            'nama_penerima' => 'required|string|max:100',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_transfer' => 'required|numeric|min:1',
         ], [
@@ -63,10 +63,10 @@ class TransferController extends Controller
         $t = TransaksiTransfer::findOrFail($id);
         $data = $request->validate([
             'provider' => 'required|string|max:100',
-            'jenis_transfer' => 'required',
+            'jenis_transfer' => 'required|string|max:50',
             'bank_tujuan' => 'required|string|max:100',
-            'nomor_rekening_tujuan' => 'required',
-            'nama_penerima' => 'required',
+            'nomor_rekening_tujuan' => 'required|string|max:30',
+            'nama_penerima' => 'required|string|max:100',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_transfer' => 'required|numeric|min:1',
             'keterangan' => 'nullable|string',

@@ -19,6 +19,11 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\PengeluaranTokoController;
 use App\Http\Controllers\ReturSupplierController;
 use App\Http\Controllers\ProviderController;
+use App\Http\Controllers\NotifikasiController;
+
+foreach (['id', 'barang', 'transfer', 'tarik_tunai', 'setor_tunai', 'tagihan', 'pulsa', 'ewallet', 'pengeluaran_toko', 'retur_supplier'] as $parameter) {
+    Route::pattern($parameter, '[0-9]+');
+}
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -68,6 +73,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/backup-data', [BackupController::class, 'download']);
     Route::post('/backup-data/restore', [BackupController::class, 'restore']);
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+    Route::get('/notifikasi', [NotifikasiController::class, 'index']);
+    Route::get('/notifikasi/unread-count', [NotifikasiController::class, 'count']);
+    Route::patch('/notifikasi/{id}/read', [NotifikasiController::class, 'markAsRead']);
+    Route::patch('/notifikasi/read-all', [NotifikasiController::class, 'markAllAsRead']);
     Route::apiResource('pengeluaran-toko', PengeluaranTokoController::class)->only(['index', 'store', 'destroy']);
     Route::apiResource('retur-supplier', ReturSupplierController::class);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Barang;
 use App\Models\ActivityLog;
 use App\Models\DetailPenjualan;
+use App\Services\NotifikasiService;
 use Illuminate\Http\Request;
 
 class BarangController extends Controller
@@ -17,15 +18,16 @@ class BarangController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'kode_barang' => 'required|unique:barang',
-            'nama_barang' => 'required',
-            'kategori' => 'required',
+            'kode_barang' => 'required|string|max:50|unique:barang,kode_barang',
+            'nama_barang' => 'required|string|max:150',
+            'kategori' => 'required|string|max:100',
             'stok' => 'required|integer|min:0',
             'harga_beli' => 'required|numeric|min:0',
             'harga_jual' => 'required|numeric|min:0',
         ]);
 
         $barang = Barang::create($data);
+        NotifikasiService::syncStockNotification($barang, null);
         ActivityLog::record('Barang', 'create', 'Menambah barang ' . $barang->nama_barang, $barang->toArray());
         return response()->json($barang, 201);
     }
@@ -39,14 +41,16 @@ class BarangController extends Controller
     {
         $barang = Barang::findOrFail($id);
         $data = $request->validate([
-            'kode_barang' => 'required|unique:barang,kode_barang,' . $id,
-            'nama_barang' => 'required',
-            'kategori' => 'required',
+            'kode_barang' => 'required|string|max:50|unique:barang,kode_barang,' . $id,
+            'nama_barang' => 'required|string|max:150',
+            'kategori' => 'required|string|max:100',
             'stok' => 'required|integer|min:0',
             'harga_beli' => 'required|numeric|min:0',
             'harga_jual' => 'required|numeric|min:0',
         ]);
+        $previousStock = (int) $barang->stok;
         $barang->update($data);
+        NotifikasiService::syncStockNotification($barang, $previousStock);
         ActivityLog::record('Barang', 'update', 'Memperbarui barang ' . $barang->nama_barang, $barang->toArray());
         return response()->json($barang);
     }
@@ -68,10 +72,12 @@ class BarangController extends Controller
 
     public function search(Request $request)
     {
+        $data = $request->validate(['q' => 'nullable|string|max:150']);
         $query = Barang::query();
-        if ($request->has('q')) {
-            $query->where('kode_barang', 'like', "%{$request->q}%")
-                  ->orWhere('nama_barang', 'like', "%{$request->q}%");
+        if (!empty($data['q'])) {
+            $search = $data['q'];
+            $query->where('kode_barang', 'like', "%{$search}%")
+                  ->orWhere('nama_barang', 'like', "%{$search}%");
         }
         return response()->json($query->get());
     }
@@ -80,9 +86,9 @@ class BarangController extends Controller
     {
         $data = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.kode_barang' => 'required|string',
-            'items.*.nama_barang' => 'required|string',
-            'items.*.kategori' => 'required|string',
+            'items.*.kode_barang' => 'required|string|max:50',
+            'items.*.nama_barang' => 'required|string|max:150',
+            'items.*.kategori' => 'required|string|max:100',
             'items.*.stok' => 'required|integer|min:0',
             'items.*.harga_beli' => 'required|numeric|min:0',
             'items.*.harga_jual' => 'required|numeric|min:0',
@@ -94,10 +100,13 @@ class BarangController extends Controller
         foreach ($data['items'] as $item) {
             $barang = Barang::where('kode_barang', $item['kode_barang'])->first();
             if ($barang) {
+                $previousStock = (int) $barang->stok;
                 $barang->update($item);
+                NotifikasiService::syncStockNotification($barang, $previousStock);
                 $updated++;
             } else {
-                Barang::create($item);
+                $barang = Barang::create($item);
+                NotifikasiService::syncStockNotification($barang, null);
                 $created++;
             }
         }

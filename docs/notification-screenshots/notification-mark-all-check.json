@@ -1,0 +1,13 @@
+{
+  "before": {
+    "badgeText": "2",
+    "dropdownOpen": true,
+    "unreadItems": 2
+  },
+  "after": {
+    "badgeExists": false,
+    "dropdownOpen": true,
+    "unreadItems": 0
+  },
+  "logs": []
+}

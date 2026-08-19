@@ -60,6 +60,7 @@ export default function ProviderFields({ form, setForm }) {
             type="text"
             value={form.nama_provider || ''}
             onChange={e => setForm({ ...form, nama_provider: e.target.value })}
+            maxLength={100}
             required
             placeholder="Masukkan nama provider"
           />

@@ -20,9 +20,9 @@ class TarikTunaiController extends Controller
     {
         $data = $request->validate([
             'provider' => 'required|string|max:100',
-            'nomor_rekening' => 'required',
-            'nama_penerima' => 'required',
-            'nomor_hp' => 'required',
+            'nomor_rekening' => 'required|string|max:30',
+            'nama_penerima' => 'required|string|max:100',
+            'nomor_hp' => 'required|string|max:20',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_tarik' => 'required|numeric|min:1',
         ], [
@@ -61,9 +61,9 @@ class TarikTunaiController extends Controller
         $t = TransaksiTarikTunai::findOrFail($id);
         $data = $request->validate([
             'provider' => 'required|string|max:100',
-            'nomor_rekening' => 'required',
-            'nama_penerima' => 'required',
-            'nomor_hp' => 'required',
+            'nomor_rekening' => 'required|string|max:30',
+            'nama_penerima' => 'required|string|max:100',
+            'nomor_hp' => 'required|string|max:20',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_tarik' => 'required|numeric|min:1',
             'status' => 'nullable|in:sukses,gagal',

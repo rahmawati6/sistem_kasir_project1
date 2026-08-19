@@ -60,11 +60,11 @@ export default function SetorTunai() {
             <ProviderFields form={form} setForm={setForm} />
             <label className="field-group"><span>Jenis Setoran</span><select value={form.jenis_setoran} onChange={e => setForm({ ...form, jenis_setoran: e.target.value })}><option value="biasa">Biasa</option><option value="tabungan">Tabungan</option></select></label>
             <NasabahKartuFields value={form.jenis_nasabah} onChange={jenisNasabah => setForm({ ...form, jenis_nasabah: jenisNasabah })} />
-            <label className="field-group"><span>No. Rekening Tujuan</span><input type="text" value={form.nomor_rekening_tujuan} onChange={e => setForm({ ...form, nomor_rekening_tujuan: e.target.value })} /></label>
-            <label className="field-group"><span>Nama Pemilik Rekening</span><input type="text" value={form.nama_pemilik_rekening} onChange={e => setForm({ ...form, nama_pemilik_rekening: e.target.value })} /></label>
-            <label className="field-group"><span>Bank Tujuan</span><input type="text" value={form.bank_tujuan} onChange={e => setForm({ ...form, bank_tujuan: e.target.value })} /></label>
+            <label className="field-group"><span>No. Rekening Tujuan</span><input type="text" maxLength={30} value={form.nomor_rekening_tujuan} onChange={e => setForm({ ...form, nomor_rekening_tujuan: e.target.value })} /></label>
+            <label className="field-group"><span>Nama Pemilik Rekening</span><input type="text" maxLength={100} value={form.nama_pemilik_rekening} onChange={e => setForm({ ...form, nama_pemilik_rekening: e.target.value })} /></label>
+            <label className="field-group"><span>Bank Tujuan</span><input type="text" maxLength={100} value={form.bank_tujuan} onChange={e => setForm({ ...form, bank_tujuan: e.target.value })} /></label>
             <label className="field-group"><span>Nominal Setor</span><input type="text" inputMode="numeric" value={form.nominal_setor} onChange={e => setForm({ ...form, nominal_setor: formatNominalInput(e.target.value) })} required placeholder="Contoh: 50.000" /></label>
-            <label className="field-group"><span>Sumber Dana</span><input type="text" value={form.sumber_dana} onChange={e => setForm({ ...form, sumber_dana: e.target.value })} /></label>
+            <label className="field-group"><span>Sumber Dana</span><input type="text" maxLength={100} value={form.sumber_dana} onChange={e => setForm({ ...form, sumber_dana: e.target.value })} /></label>
             <div className="brilink-calculation-box full"><span>Admin otomatis: <strong>{formatRupiah(previewAdmin)}</strong></span><span>Total bayar: <strong>{formatRupiah(previewTotal)}</strong></span></div>
             <label className="field-group full"><span>Keterangan</span><input type="text" value={form.keterangan} onChange={e => setForm({ ...form, keterangan: e.target.value })} /></label>
             <div className="form-actions full"><button type="button" onClick={() => setShowForm(false)} className="secondary-button">Batal</button><button type="submit" disabled={loading} className="primary-action-button">{loading ? 'Memproses...' : 'Simpan Setoran'}</button></div>

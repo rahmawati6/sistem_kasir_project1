@@ -88,7 +88,7 @@ export default function PengeluaranToko() {
         <form onSubmit={submit} className="brilink-form-grid">
           <label className="field-group"><span>Tanggal</span><input type="date" value={form.tanggal} onChange={e => setForm({ ...form, tanggal: e.target.value })} /></label>
           <label className="field-group"><span>Kategori</span><select value={form.kategori} onChange={e => setForm({ ...form, kategori: e.target.value })}><option>Listrik</option><option>Gaji</option><option>Belanja Operasional</option><option>Transport</option><option>Lainnya</option></select></label>
-          <label className="field-group"><span>Nama Pengeluaran</span><input value={form.nama_pengeluaran} onChange={e => setForm({ ...form, nama_pengeluaran: e.target.value })} required /></label>
+          <label className="field-group"><span>Nama Pengeluaran</span><input maxLength={150} value={form.nama_pengeluaran} onChange={e => setForm({ ...form, nama_pengeluaran: e.target.value })} required /></label>
           <label className="field-group"><span>Nominal</span><input type="text" inputMode="numeric" value={form.nominal} onChange={e => setForm({ ...form, nominal: formatNominalInput(e.target.value) })} required placeholder="Contoh: 50.000" /></label>
           <label className="field-group full"><span>Keterangan</span><textarea value={form.keterangan} onChange={e => setForm({ ...form, keterangan: e.target.value })} /></label>
           <div className="form-actions full"><button disabled={loading} className="primary-action-button">{loading ? 'Menyimpan...' : 'Simpan Pengeluaran'}</button></div>

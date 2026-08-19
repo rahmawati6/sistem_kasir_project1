@@ -104,7 +104,7 @@ export default function RiwayatBrilink() {
         <label className="field-group"><span>Tanggal Mulai</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label>
         <label className="field-group"><span>Tanggal Akhir</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label>
         <label className="field-group"><span>Jenis Layanan</span><select value={jenis} onChange={e => setJenis(e.target.value)}><option value="semua">Semua</option><option value="transfer">Transfer</option><option value="tarik_tunai">Tarik Tunai</option><option value="setor_tunai">Setor Tunai</option><option value="tagihan">Tagihan</option><option value="pulsa">Pulsa</option><option value="ewallet">E-Wallet</option></select></label>
-        <label className="field-group"><span>Cari</span><input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchData()} placeholder="Kode, nama, nomor" /></label>
+        <label className="field-group"><span>Cari</span><input maxLength={100} value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchData()} placeholder="Kode, nama, nomor" /></label>
         <button type="button" onClick={fetchData} className="filter-search-button"><Search size={17} />Cari</button>
       </section>
 

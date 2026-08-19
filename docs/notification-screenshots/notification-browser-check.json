@@ -1,0 +1,45 @@
+﻿{
+    "desktopInfo":  {
+                        "badgeText":  "2",
+                        "bellCount":  1,
+                        "dropdownOpen":  true,
+                        "error":  "",
+                        "itemCount":  2,
+                        "loading":  false,
+                        "path":  "/dashboard",
+                        "text":  "Notifikasi\n\n2 belum dibaca\n\nTandai semua sudah dibaca\nStok barang menipis\nStok Barang Demo tersisa 3 unit.\n9 menit lalu\nStok barang menipis\nStok Barang Demo tersisa 5 pcs.\n54 menit lalu",
+                        "title":  "Notifikasi",
+                        "unreadItems":  2
+                    },
+    "mobileInfo":  {
+                       "badgeText":  "1",
+                       "boxLeft":  665,
+                       "boxRight":  1055,
+                       "dropdownOpen":  true,
+                       "itemCount":  3,
+                       "overflowX":  false,
+                       "sidebarClass":  "app-sidebar sidebar-closed",
+                       "sidebarRight":  78,
+                       "viewportWidth":  1280
+                   },
+    "markAllCheck":  {
+                         "before":  {
+                                        "badgeText":  "2",
+                                        "dropdownOpen":  true,
+                                        "unreadItems":  2
+                                    },
+                         "after":  {
+                                       "badgeExists":  false,
+                                       "dropdownOpen":  true,
+                                       "unreadItems":  0
+                                   },
+                         "logs":  [
+
+                                  ]
+                     },
+    "afterEscape":  true,
+    "logsAfterFix":  [
+
+                     ],
+    "note":  "Browser smoke test memakai database sistem_project1_test; tidak ada request Midtrans nyata."
+}

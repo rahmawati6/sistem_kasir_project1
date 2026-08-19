@@ -21,8 +21,8 @@ class TagihanController extends Controller
         $data = $request->validate([
             'provider' => 'required|string|max:100',
             'jenis_layanan' => 'required|in:pln,pdam,bpjs,indihome,angsuran,lainnya',
-            'nomor_pelanggan' => 'required',
-            'nama_pelanggan' => 'required',
+            'nomor_pelanggan' => 'required|string|max:50',
+            'nama_pelanggan' => 'required|string|max:100',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'jumlah_tagihan' => 'required|numeric|min:1',
         ], [
@@ -63,8 +63,8 @@ class TagihanController extends Controller
         $data = $request->validate([
             'provider' => 'required|string|max:100',
             'jenis_layanan' => 'required|in:pln,pdam,bpjs,indihome,angsuran,lainnya',
-            'nomor_pelanggan' => 'required',
-            'nama_pelanggan' => 'required',
+            'nomor_pelanggan' => 'required|string|max:50',
+            'nama_pelanggan' => 'required|string|max:100',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'jumlah_tagihan' => 'required|numeric|min:1',
             'status' => 'nullable|in:sukses,gagal',

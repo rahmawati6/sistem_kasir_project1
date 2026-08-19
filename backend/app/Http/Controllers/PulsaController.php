@@ -20,10 +20,10 @@ class PulsaController extends Controller
     {
         $data = $request->validate([
             'provider' => 'required|string|max:100',
-            'operator' => 'required',
+            'operator' => 'required|string|max:50',
             'jenis_layanan' => 'required|in:pulsa,paket_data',
-            'nomor_tujuan' => 'required',
-            'produk' => 'required',
+            'nomor_tujuan' => 'required|string|max:20',
+            'produk' => 'required|string|max:150',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'harga' => 'required|numeric|min:1',
         ], [
@@ -64,10 +64,10 @@ class PulsaController extends Controller
         $p = TransaksiPulsa::findOrFail($id);
         $data = $request->validate([
             'provider' => 'required|string|max:100',
-            'operator' => 'required',
+            'operator' => 'required|string|max:50',
             'jenis_layanan' => 'required|in:pulsa,paket_data',
-            'nomor_tujuan' => 'required',
-            'produk' => 'required',
+            'nomor_tujuan' => 'required|string|max:20',
+            'produk' => 'required|string|max:150',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'harga' => 'required|numeric|min:1',
             'status' => 'nullable|in:sukses,gagal',

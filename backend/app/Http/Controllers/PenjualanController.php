@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use App\Services\NotifikasiService;
 
 class PenjualanController extends Controller
 {
@@ -28,11 +29,11 @@ class PenjualanController extends Controller
     {
         $data = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:barang,id',
+            'items.*.id' => 'required|integer|min:1|max:4294967295|exists:barang,id',
             'items.*.jumlah' => 'required|integer|min:1',
             'metode_pembayaran' => 'required|in:tunai,qris',
             'uang_bayar' => 'required_if:metode_pembayaran,tunai|nullable|numeric|min:0',
-            'qris_order_id' => 'required_if:metode_pembayaran,qris|nullable|string|unique:pembayaran_qris,order_id',
+            'qris_order_id' => 'required_if:metode_pembayaran,qris|nullable|string|max:100|unique:pembayaran_qris,order_id',
         ], [
             'items.required' => 'Keranjang masih kosong.',
             'items.min' => 'Minimal pilih 1 barang untuk transaksi.',
@@ -89,8 +90,10 @@ class PenjualanController extends Controller
                     'subtotal' => $item['subtotal']
                 ]);
 
+                $previousStock = (int) $barang->stok;
                 $barang->stok -= $item['jumlah'];
                 $barang->save();
+                NotifikasiService::syncStockNotification($barang, $previousStock);
             }
 
             if ($data['metode_pembayaran'] === 'qris') {
@@ -121,7 +124,7 @@ class PenjualanController extends Controller
     {
         $data = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:barang,id',
+            'items.*.id' => 'required|integer|min:1|max:4294967295|exists:barang,id',
             'items.*.jumlah' => 'required|integer|min:1',
         ], [
             'items.required' => 'Keranjang masih kosong.',
@@ -195,7 +198,7 @@ class PenjualanController extends Controller
     public function qrisStatus(Request $request)
     {
         $data = $request->validate([
-            'order_id' => 'required|string',
+            'order_id' => 'required|string|max:100',
         ]);
 
         $serverKey = config('services.midtrans.server_key');
@@ -281,11 +284,11 @@ class PenjualanController extends Controller
     public function retur(Request $request, $id)
     {
         $data = $request->validate([
-            'detail_penjualan_id' => 'required_without:detail_id|exists:detail_penjualan,id',
-            'detail_id' => 'required_without:detail_penjualan_id|exists:detail_penjualan,id',
+            'detail_penjualan_id' => 'required_without:detail_id|integer|min:1|max:4294967295|exists:detail_penjualan,id',
+            'detail_id' => 'required_without:detail_penjualan_id|integer|min:1|max:4294967295|exists:detail_penjualan,id',
             'jumlah' => 'required|integer|min:1',
             'alasan_retur' => 'required_without:alasan|nullable|in:Barang Rusak,Barang Cacat,Salah Barang,Tidak Sesuai Pesanan,Tidak Berfungsi,Lainnya',
-            'alasan' => 'required_without:alasan_retur|nullable|string|min:3',
+            'alasan' => 'required_without:alasan_retur|nullable|string|min:3|max:255',
             'metode_pengembalian_dana' => 'required_without:alasan|nullable|in:pengembalian_dana,penggantian_barang,tunai,qris',
             'keterangan' => 'nullable|string',
         ], [
@@ -329,8 +332,10 @@ class PenjualanController extends Controller
 
             $barang = Barang::lockForUpdate()->findOrFail($detail->barang_id);
             if ($metodePengembalianDana !== 'penggantian_barang') {
+                $previousStock = (int) $barang->stok;
                 $barang->stok += (int) $data['jumlah'];
                 $barang->save();
+                NotifikasiService::syncStockNotification($barang, $previousStock);
             }
 
             return ReturPelanggan::create([
@@ -363,6 +368,7 @@ class PenjualanController extends Controller
             'Admin membuat retur pelanggan untuk barang ' . $retur->nama_barang . ' sebanyak ' . $retur->jumlah_retur . ' pcs dengan alasan ' . $retur->alasan_retur . ' dan penyelesaian retur ' . $metodeLabel . '.',
             $retur->toArray()
         );
+        NotifikasiService::returPelangganProcessed($retur);
 
         return response()->json([
             'message' => 'Retur berhasil dicatat dan stok diperbarui',
@@ -373,12 +379,12 @@ class PenjualanController extends Controller
     public function qrisWebhook(Request $request)
     {
         $data = $request->validate([
-            'order_id' => 'required|string',
+            'order_id' => 'required|string|max:100',
             'status_code' => 'required',
             'gross_amount' => 'required',
             'signature_key' => 'required|string',
             'transaction_status' => 'required|string',
-            'transaction_id' => 'nullable|string',
+            'transaction_id' => 'nullable|string|max:100',
         ]);
 
         $serverKey = config('services.midtrans.server_key');
@@ -394,11 +400,13 @@ class PenjualanController extends Controller
 
         $qris = PembayaranQris::where('order_id', $data['order_id'])->first();
         if ($qris) {
+            $previousStatus = $qris->status_pembayaran;
             $qris->update([
                 'status_pembayaran' => $this->normalizeQrisPaymentStatus($data['transaction_status']),
                 'transaction_id' => $data['transaction_id'] ?? null,
                 'payment_response' => $request->all(),
             ]);
+            NotifikasiService::qrisStatusChanged($qris->fresh(), $previousStatus, $qris->fresh()->status_pembayaran);
         }
 
         ActivityLog::record('Midtrans', 'webhook', 'Webhook Midtrans untuk order ' . $data['order_id'], $request->all());

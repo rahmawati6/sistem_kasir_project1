@@ -21,12 +21,12 @@ class SetorTunaiController extends Controller
         $data = $request->validate([
             'provider' => 'required|string|max:100',
             'jenis_setoran' => 'required|in:biasa,tabungan',
-            'nomor_rekening_tujuan' => 'nullable|string',
-            'nama_pemilik_rekening' => 'nullable|string',
-            'bank_tujuan' => 'nullable|string',
+            'nomor_rekening_tujuan' => 'nullable|string|max:30',
+            'nama_pemilik_rekening' => 'nullable|string|max:100',
+            'bank_tujuan' => 'nullable|string|max:100',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_setor' => 'required|numeric|min:1',
-            'sumber_dana' => 'nullable|string',
+            'sumber_dana' => 'nullable|string|max:100',
             'keterangan' => 'nullable|string',
         ], [
             'provider.required' => 'Provider transaksi wajib diisi.',
@@ -64,12 +64,12 @@ class SetorTunaiController extends Controller
         $data = $request->validate([
             'provider' => 'required|string|max:100',
             'jenis_setoran' => 'required|in:biasa,tabungan',
-            'nomor_rekening_tujuan' => 'nullable|string',
-            'nama_pemilik_rekening' => 'nullable|string',
-            'bank_tujuan' => 'nullable|string',
+            'nomor_rekening_tujuan' => 'nullable|string|max:30',
+            'nama_pemilik_rekening' => 'nullable|string|max:100',
+            'bank_tujuan' => 'nullable|string|max:100',
             'jenis_nasabah' => 'required|in:internal,eksternal',
             'nominal_setor' => 'required|numeric|min:1',
-            'sumber_dana' => 'nullable|string',
+            'sumber_dana' => 'nullable|string|max:100',
             'keterangan' => 'nullable|string',
             'status' => 'nullable|in:sukses,gagal',
         ]);

@@ -1008,7 +1008,15 @@ button { cursor: pointer; }
   margin: 0 2px;
   background: #cbd5e1;
 }
-.topbar-actions { gap: 12px; }
+.topbar-actions {
+  position: relative;
+  gap: 12px;
+}
+
+.notification-wrapper {
+  position: relative;
+  display: inline-flex;
+}
 
 .notification-button {
   position: relative;
@@ -1022,14 +1030,223 @@ button { cursor: pointer; }
   background: #fff;
 }
 
-.notification-button span {
+.notification-button:focus-visible,
+.notification-dropdown button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
+}
+
+.notification-badge {
   position: absolute;
-  top: 9px;
-  right: 9px;
-  width: 8px;
-  height: 8px;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   background: #ef4444;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 80;
+  width: min(390px, calc(100vw - 28px));
+  max-height: min(620px, calc(100vh - 96px));
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+}
+
+.notification-dropdown-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #eff6ff, #fff);
+}
+
+.notification-dropdown-header h2 {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 880;
+}
+
+.notification-dropdown-header p {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notification-dropdown-header button,
+.notification-state button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 10px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.notification-dropdown-header button:disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.notification-list {
+  max-height: 510px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.notification-item {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: flex-start;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px;
+  color: #0f172a;
+  background: transparent;
+  text-align: left;
+}
+
+.notification-item:hover {
+  background: #f8fafc;
+}
+
+.notification-item.unread {
+  background: #eff6ff;
+}
+
+.notification-item-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.notification-item-icon.stok_habis,
+.notification-item-icon.qris_gagal {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.notification-item-icon.stok_menipis {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.notification-item-icon.qris_berhasil {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.notification-item-icon.retur_supplier_status,
+.notification-item-icon.retur_pelanggan_diproses {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.notification-item-body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.notification-item-body strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.notification-item-body span {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.notification-item-body small {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.notification-unread-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.notification-state {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.notification-error {
+  color: #b91c1c;
+}
+
+.notification-spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .notification-wrapper {
+    position: static;
+  }
+
+  .notification-dropdown {
+    top: calc(100% + 8px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .notification-dropdown-header {
+    flex-direction: column;
+  }
+
+  .notification-dropdown-header button {
+    width: 100%;
+  }
 }
 
 .user-chip {

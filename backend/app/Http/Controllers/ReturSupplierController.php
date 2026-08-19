@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateReturSupplierRequest;
 use App\Models\ActivityLog;
 use App\Models\Barang;
 use App\Models\ReturSupplier;
+use App\Services\NotifikasiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,11 +18,19 @@ class ReturSupplierController extends Controller
 
     public function index(Request $request)
     {
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
-        $supplier = $request->query('supplier');
-        $status = $request->query('status');
-        $search = strtolower((string) $request->query('search', ''));
+        $filters = $request->validate([
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'supplier' => ['nullable', 'string', 'max:150'],
+            'status' => ['nullable', 'in:semua,diproses,diterima,ditolak'],
+            'search' => ['nullable', 'string', 'max:150'],
+        ]);
+
+        $startDate = $filters['start_date'] ?? null;
+        $endDate = $filters['end_date'] ?? null;
+        $supplier = $filters['supplier'] ?? null;
+        $status = $filters['status'] ?? null;
+        $search = strtolower($filters['search'] ?? '');
 
         $data = ReturSupplier::with('barang')
             ->when($startDate && $endDate, fn($query) => $query->whereBetween('tanggal_retur', [$startDate, $endDate]))
@@ -112,6 +121,7 @@ class ReturSupplierController extends Controller
 
             if ($previousStatus !== $retur->status_retur) {
                 ActivityLog::record('Retur Supplier', 'update', 'Admin mengubah status menjadi ' . ucfirst($retur->status_retur) . '.', $retur->toArray());
+                NotifikasiService::returSupplierStatusChanged($retur, $previousStatus);
             }
 
             return $retur->fresh('barang');
@@ -155,14 +165,18 @@ class ReturSupplierController extends Controller
             if ($barang->stok < (int) $retur->jumlah_retur) {
                 abort(422, 'Stok ' . $barang->nama_barang . ' tidak cukup untuk retur. Sisa stok: ' . $barang->stok . ' pcs.');
             }
+            $previousStock = (int) $barang->stok;
             $barang->stok -= (int) $retur->jumlah_retur;
             $barang->save();
+            NotifikasiService::syncStockNotification($barang, $previousStock);
             $retur->stok_dikurangi = true;
         }
 
         if ($retur->status_retur !== 'diterima' && $retur->stok_dikurangi) {
+            $previousStock = (int) $barang->stok;
             $barang->stok += (int) $retur->jumlah_retur;
             $barang->save();
+            NotifikasiService::syncStockNotification($barang, $previousStock);
             $retur->stok_dikurangi = false;
         }
     }

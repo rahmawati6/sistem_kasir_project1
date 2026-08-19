@@ -16,7 +16,7 @@ class StoreReturSupplierRequest extends FormRequest
         return [
             'tanggal_retur' => 'required|date',
             'nama_supplier' => 'required|string|max:150',
-            'barang_id' => 'required|exists:barang,id',
+            'barang_id' => 'required|integer|min:1|max:4294967295|exists:barang,id',
             'jumlah_retur' => 'required|integer|min:1',
             'alasan_retur' => 'required|string|min:3',
             'keterangan' => 'nullable|string',

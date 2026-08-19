@@ -57,9 +57,9 @@ export default function TarikTunai() {
           <div className="brilink-section-title"><Wallet size={20} /><div><h2>Form Tarik Tunai</h2><p>Isi data penerima dan nominal penarikan.</p></div></div>
           <form onSubmit={handleSubmit} className="brilink-form-grid">
             <ProviderFields form={form} setForm={setForm} />
-            <label className="field-group"><span>No. Rekening</span><input type="text" value={form.nomor_rekening} onChange={e => setForm({ ...form, nomor_rekening: e.target.value })} required /></label>
-            <label className="field-group"><span>Nama Penerima</span><input type="text" value={form.nama_penerima} onChange={e => setForm({ ...form, nama_penerima: e.target.value })} required /></label>
-            <label className="field-group"><span>No. HP</span><input type="text" value={form.nomor_hp} onChange={e => setForm({ ...form, nomor_hp: e.target.value })} required /></label>
+            <label className="field-group"><span>No. Rekening</span><input type="text" maxLength={30} value={form.nomor_rekening} onChange={e => setForm({ ...form, nomor_rekening: e.target.value })} required /></label>
+            <label className="field-group"><span>Nama Penerima</span><input type="text" maxLength={100} value={form.nama_penerima} onChange={e => setForm({ ...form, nama_penerima: e.target.value })} required /></label>
+            <label className="field-group"><span>No. HP</span><input type="text" maxLength={20} value={form.nomor_hp} onChange={e => setForm({ ...form, nomor_hp: e.target.value })} required /></label>
             <NasabahKartuFields value={form.jenis_nasabah} onChange={jenisNasabah => setForm({ ...form, jenis_nasabah: jenisNasabah })} />
             <label className="field-group"><span>Nominal Tarik</span><input type="text" inputMode="numeric" value={form.nominal_tarik} onChange={e => setForm({ ...form, nominal_tarik: formatNominalInput(e.target.value) })} required placeholder="Contoh: 50.000" /></label>
             <div className="brilink-calculation-box full"><span>Biaya Admin: {formatRupiah(previewAdmin)}</span><strong>Total Bayar: {formatRupiah(previewTotal)}</strong></div>

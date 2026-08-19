@@ -1,0 +1,14 @@
+{
+  "mobileInfo": {
+    "badgeText": "1",
+    "boxLeft": 665,
+    "boxRight": 1055,
+    "dropdownOpen": true,
+    "itemCount": 3,
+    "overflowX": false,
+    "sidebarClass": "app-sidebar sidebar-closed",
+    "sidebarRight": 78,
+    "viewportWidth": 1280
+  },
+  "logs": []
+}

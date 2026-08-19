@@ -230,6 +230,20 @@ cd backend
 php artisan test
 ```
 
+## Pedoman Migration Database Bisnis
+
+Seluruh primary key dan foreign key pada tabel bisnis menggunakan `INT UNSIGNED`. Migration bisnis baru harus mengikuti pola berikut:
+
+```php
+$table->increments('id'); // INT UNSIGNED PRIMARY KEY AUTO_INCREMENT
+$table->unsignedInteger('barang_id');
+$table->foreign('barang_id')->references('id')->on('barang');
+```
+
+Jangan memakai `$table->id()` atau `foreignId()` untuk tabel dan relasi bisnis karena keduanya menghasilkan `BIGINT UNSIGNED`. Aturan ini tidak mengubah tabel internal Laravel seperti queue, token, password reset, atau migration framework yang tidak berelasi dengan tabel bisnis.
+
+Kode transaksi, kode barang, nomor rekening, nomor telepon, nomor pelanggan, nomor e-wallet, nomor retur, order ID, dan transaction ID tetap menggunakan string. Nominal uang tetap menggunakan `DECIMAL(15,2)`.
+
 ## Repository
 
 Repository GitHub:

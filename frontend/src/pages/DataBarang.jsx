@@ -101,9 +101,9 @@ export default function DataBarang() {
   const normalizeImportRows = (rows) => rows.map(row => {
     const item = Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeImportHeader(key), value]))
     return {
-      kode_barang: item.kode_barang || item.kode || item.barcode || '',
-      nama_barang: item.nama_barang || item.nama || item.barang || '',
-      kategori: item.kategori || item.category || '',
+      kode_barang: String(item.kode_barang || item.kode || item.barcode || '').trim(),
+      nama_barang: String(item.nama_barang || item.nama || item.barang || '').trim(),
+      kategori: String(item.kategori || item.category || '').trim(),
       stok: parseImportNumber(item.stok),
       harga_beli: parseImportNumber(item.harga_beli || item.modal || item.harga_modal),
       harga_jual: parseImportNumber(item.harga_jual || item.harga || item.jual),
@@ -144,6 +144,8 @@ export default function DataBarang() {
       const isExcel = /\.xlsx$/i.test(file.name)
       const items = isExcel ? await parseImportWorkbook(file) : parseImportText(await file.text())
       if (!items.length) return toast.error('Format file tidak terbaca. Gunakan header kode_barang,nama_barang,kategori,stok,harga_beli,harga_jual.')
+      const invalidItem = items.find(item => item.kode_barang.length > 50 || item.nama_barang.length > 150 || item.kategori.length > 100)
+      if (invalidItem) return toast.error('Import dibatalkan: kode maksimal 50, nama barang 150, dan kategori 100 karakter. Format kolom kode sebagai Text agar nol awal tetap tersimpan.')
       const res = await api.post('/barang/import', { items })
       toast.success(`${res.data.created} barang baru, ${res.data.updated} barang diperbarui`)
       fetchBarang()
@@ -331,7 +333,7 @@ export default function DataBarang() {
           )}
           <label className="inventory-search">
             <Search size={19} />
-            <input type="text" placeholder="Cari kode, nama, atau kategori..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input type="text" maxLength={150} placeholder="Cari kode, nama, atau kategori..." value={search} onChange={e => setSearch(e.target.value)} />
           </label>
         </div>
 
@@ -440,6 +442,7 @@ export default function DataBarang() {
                   autoFocus={usbInputActive}
                   value={form.kode_barang}
                   onChange={e => setForm({ ...form, kode_barang: e.target.value })}
+                  maxLength={50}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && form.kode_barang.trim()) {
                       e.preventDefault()
@@ -472,7 +475,7 @@ export default function DataBarang() {
 
           <label className="field-group">
             <span>Nama Barang</span>
-            <input type="text" value={form.nama_barang} onChange={e => setForm({ ...form, nama_barang: e.target.value })} required />
+            <input type="text" maxLength={150} value={form.nama_barang} onChange={e => setForm({ ...form, nama_barang: e.target.value })} required />
           </label>
 
           <div className="form-grid three">
