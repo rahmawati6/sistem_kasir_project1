@@ -175,7 +175,7 @@ button { cursor: pointer; }
 .login-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(560px, 0.98fr) minmax(520px, 1.02fr);
+  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
   background: #f8fbff;
   color: #fff;
 }
@@ -538,6 +538,7 @@ button { cursor: pointer; }
 .field-group {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .field-group span {
@@ -577,6 +578,8 @@ button { cursor: pointer; }
 
 .field-group input {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 54px;
   border: 1px solid #cbd5e1;
   border-radius: 13px;
@@ -1738,6 +1741,42 @@ button { cursor: pointer; }
   background: #f8fbff;
 }
 
+/* Supplier uses a different set of columns from the stock table. Keep its
+   descriptive fields readable while keeping quantity and actions aligned. */
+.supplier-table {
+  min-width: 980px;
+  table-layout: fixed;
+}
+
+.supplier-name-col { width: 19%; }
+.supplier-phone-col { width: 16%; }
+.supplier-address-col { width: 26%; }
+.supplier-note-col { width: 18%; }
+.supplier-count-col { width: 11%; }
+.supplier-action-col { width: 10%; }
+
+.supplier-table th:nth-child(4),
+.supplier-table td:nth-child(4) {
+  text-align: left;
+}
+
+.supplier-table th:nth-child(5),
+.supplier-table td:nth-child(5),
+.supplier-table th:nth-child(6),
+.supplier-table td:nth-child(6) {
+  text-align: center;
+}
+
+.supplier-table td:nth-child(2),
+.supplier-table td:nth-child(5) {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.supplier-table .table-actions {
+  justify-content: center;
+}
+
 .item-code {
   display: inline-flex;
   align-items: center;
@@ -2018,6 +2057,8 @@ button { cursor: pointer; }
 
 .field-group select {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 48px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
@@ -2036,6 +2077,7 @@ button { cursor: pointer; }
 .form-actions {
   padding-top: 8px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
 }
@@ -2108,12 +2150,15 @@ button { cursor: pointer; }
 }
 
 .modal-header h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #0f172a;
   font-size: 20px;
   font-weight: 880;
 }
 
 .modal-header button {
+  flex: 0 0 38px;
   width: 38px;
   height: 38px;
   border: 0;
@@ -2406,6 +2451,7 @@ button { cursor: pointer; }
 .sales-heading,
 .report-heading {
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .scan-open-button {
@@ -3091,6 +3137,22 @@ button { cursor: pointer; }
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
 }
 
+.qris-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #fff;
+  border: 10px solid #fff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.qris-code svg {
+  display: block;
+  width: 220px;
+  height: 220px;
+}
+
 .qris-box h3 {
   color: #0f172a;
   font-size: 18px;
@@ -3441,6 +3503,7 @@ button { cursor: pointer; }
 
 .report-heading-actions {
   flex: 0 0 auto;
+  max-width: 100%;
   display: grid;
   justify-items: end;
   gap: 10px;
@@ -3449,6 +3512,12 @@ button { cursor: pointer; }
 .report-action-buttons {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-management-actions {
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -3496,7 +3565,7 @@ button { cursor: pointer; }
 .report-filter-panel {
   padding: 22px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 18px;
 }
 
@@ -3977,19 +4046,19 @@ button { cursor: pointer; }
 .brilink-filter-panel {
   padding: 18px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 240px));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   gap: 14px;
 }
 
 .riwayat-filter-panel {
-  grid-template-columns: minmax(170px, 240px) minmax(170px, 240px) minmax(170px, 240px) minmax(210px, 280px) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   align-items: end;
   column-gap: 14px;
   row-gap: 12px;
 }
 
 .retur-supplier-filter-panel {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   align-items: end;
   gap: 16px;
 }
@@ -4012,7 +4081,7 @@ button { cursor: pointer; }
 }
 
 .return-history-filter-panel {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   align-items: end;
   gap: 16px;
 }
@@ -4051,7 +4120,7 @@ button { cursor: pointer; }
 }
 
 .activity-filter-panel {
-  grid-template-columns: minmax(260px, 420px) minmax(170px, 240px) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   align-items: end;
   column-gap: 14px;
   row-gap: 12px;
@@ -4238,6 +4307,13 @@ button { cursor: pointer; }
   font-size: 12px;
 }
 
+/* Pil status di dalam sel bertumpuk (mis. kolom Jenis di Transfer):
+   biarkan selebar isinya supaya sama rata dengan pil di kolom lain */
+.person-cell .service-pill {
+  display: inline-flex;
+  width: fit-content;
+}
+
 .service-pill {
   display: inline-flex;
   align-items: center;
@@ -4331,7 +4407,7 @@ button { cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .table-action-button {
@@ -4846,10 +4922,72 @@ button { cursor: pointer; }
   table-layout: auto;
 }
 
+/* break-word (bukan anywhere) supaya kolom pendek tidak diperas sampai
+   teks terpotong per huruf; kata yang terlalu panjang tetap dipotong. */
 .inventory-table td,
 .report-table td,
-.brilink-table td {
-  overflow-wrap: anywhere;
+.brilink-table td,
+.supplier-table td,
+.ewallet-table td,
+.return-history-table td {
+  overflow-wrap: break-word;
+}
+
+/* Judul kolom selalu utuh satu baris. */
+.inventory-table th,
+.report-table th,
+.brilink-table th,
+.supplier-table th,
+.ewallet-table th,
+.return-history-table th {
+  white-space: nowrap;
+}
+
+/* Unsur pendek dalam sel: kode transaksi, pil pembayaran/status,
+   dan kolom yang diberi tanda .nowrap (mis. tanggal). */
+.item-code,
+.payment-pill,
+.status-pill,
+td.nowrap {
+  white-space: nowrap;
+}
+
+/* Kolom Kode (kolom pertama) tetap menempel saat tabel digeser ke samping. */
+.inventory-table th:first-child,
+.report-table th:first-child,
+.brilink-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #f8fafc;
+  box-shadow: inset -1px 0 0 #e2e8f0;
+}
+
+.inventory-table td:first-child,
+.report-table td:first-child,
+.brilink-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+  box-shadow: inset -1px 0 0 #edf2f7;
+}
+
+.inventory-table tbody tr:hover td:first-child,
+.brilink-table tbody tr:hover td:first-child {
+  background: #f8fbff;
+}
+
+/* Panel filter: tidak boleh ada isian yang keluar dari tepi kartu. */
+.brilink-filter-panel,
+.report-filter-panel {
+  min-width: 0;
+}
+
+.brilink-filter-panel > *,
+.report-filter-panel > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .money-cell,
@@ -4896,7 +5034,7 @@ button { cursor: pointer; }
 .brilink-filter-panel,
 .brilink-summary-card,
 .admin-fee-card {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 980px) {
@@ -5771,5 +5909,79 @@ button { cursor: pointer; }
     min-height: 42px;
     padding: 0 12px;
     font-size: 12px;
+  }
+}
+
+/* ============================================================
+   Penyesuaian layar ponsel
+   ============================================================ */
+
+/* Status bar / poni: jangan sampai ada isi yang tertutup. */
+.app-sidebar {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.topbar {
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+}
+
+.app-main {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Input tanggal bawaan ponsel (iOS/Samsung) tampil abu-abu dan bisa lebih
+   lebar dari kartunya; paksa ikut lebar kolom seperti input biasa. */
+@media (hover: none) and (pointer: coarse) {
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    background-color: #fff;
+    text-align: left;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Topbar tidak tembus pandang: isi halaman tidak terlihat di baliknya. */
+  .topbar {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+
+  /* Halaman tidak bisa digeser ke samping. */
+  .app-main {
+    overflow-x: hidden;
+  }
+
+  /* Kolom Kode yang menempel dibuat lebih ramping di ponsel. */
+  .inventory-table th:first-child,
+  .inventory-table td:first-child,
+  .report-table th:first-child,
+  .report-table td:first-child,
+  .brilink-table th:first-child,
+  .brilink-table td:first-child {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* Rentang tanggal pada judul laporan dikecilkan agar tetap satu baris. */
+  .report-date-range {
+    justify-content: center;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+}
+
+@media (max-width: 440px) {
+  .topbar {
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
   }
 }

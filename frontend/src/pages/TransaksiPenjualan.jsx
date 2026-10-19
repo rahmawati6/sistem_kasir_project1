@@ -10,8 +10,10 @@ import SalesReceiptModal from '../components/Sales/SalesReceiptModal'
 import SalesScannerModals from '../components/Sales/SalesScannerModals'
 import toast from 'react-hot-toast'
 import { BrowserMultiFormatReader } from '@zxing/browser'
+import { useBusinessRequest } from '../hooks/useBusinessRequest'
 
 export default function TransaksiPenjualan() {
+  const businessRequest = useBusinessRequest()
   const [cart, setCart] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [products, setProducts] = useState([])
@@ -24,6 +26,7 @@ export default function TransaksiPenjualan() {
   const [qrisData, setQrisData] = useState(null)
   const [qrisError, setQrisError] = useState('')
   const [qrisStatus, setQrisStatus] = useState('')
+  const [manualConfirming, setManualConfirming] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [usbScannerOpen, setUsbScannerOpen] = useState(false)
   const [scannerError, setScannerError] = useState('')
@@ -53,8 +56,8 @@ export default function TransaksiPenjualan() {
     if (paymentMethod !== 'qris' || !qrisData?.order_id || ['settlement', 'capture'].includes(qrisStatus)) return
 
     const interval = window.setInterval(() => {
-      checkMidtransQrisStatus(false)
-    }, 5000)
+      checkQrisStatus(false)
+    }, 2000)
 
     return () => window.clearInterval(interval)
   }, [paymentMethod, qrisData?.order_id, qrisStatus])
@@ -120,9 +123,30 @@ export default function TransaksiPenjualan() {
       toast.error('Gagal menyalin URL QRIS')
     }
   }
+  const openSimulationPage = () => {
+    const url = qrisData?.simulation_url
+    if (!url) return toast.error('Halaman simulasi belum tersedia')
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+  const copySimulationLink = async () => {
+    const url = qrisData?.simulation_url
+    if (!url) return toast.error('Halaman simulasi belum tersedia')
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link halaman simulasi disalin')
+    } catch (e) {
+      toast.error('Gagal menyalin link simulasi')
+    }
+  }
 
   const openMidtransSimulator = () => {
     window.location.assign('https://simulator.sandbox.midtrans.com/')
+  }
+
+  const openPaymentPage = () => {
+    const url = qrisData?.payment_url || qrisData?.qris_url
+    if (!url) return toast.error('Link pembayaran belum tersedia')
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const closePaymentModal = () => {
@@ -132,15 +156,17 @@ export default function TransaksiPenjualan() {
     setQrisData(null)
     setQrisStatus('')
     setQrisError('')
+    setManualConfirming(false)
     qrisAutoCheckoutRef.current = false
   }
 
-  const createMidtransQris = async () => {
+  const createQris = async () => {
     if (cart.length === 0) return
     setQrisLoading(true)
     setQrisError('')
     setQrisData(null)
     setQrisStatus('')
+    setManualConfirming(false)
     qrisAutoCheckoutRef.current = false
     try {
       const res = await api.post('/penjualan/qris', {
@@ -155,15 +181,15 @@ export default function TransaksiPenjualan() {
       setQrisData(res.data)
       setQrisStatus(res.data?.status || 'pending')
     } catch (e) {
-      setQrisError(getApiErrorMessage(e, 'Gagal membuat QRIS Midtrans'))
+      setQrisError(getApiErrorMessage(e, 'Gagal membuat QRIS'))
     } finally {
       setQrisLoading(false)
     }
   }
 
-  const checkMidtransQrisStatus = async (showMessage = true) => {
+  const checkQrisStatus = async (showMessage = true) => {
     if (!qrisData?.order_id) {
-      if (showMessage) toast.error('Buat QRIS Midtrans dulu')
+      if (showMessage) toast.error('Buat QRIS dulu')
       return ''
     }
 
@@ -182,10 +208,27 @@ export default function TransaksiPenjualan() {
       }
       return latestStatus
     } catch (e) {
-      setQrisError(getApiErrorMessage(e, 'Gagal mengecek status pembayaran Midtrans'))
+      setQrisError(getApiErrorMessage(e, 'Gagal mengecek status pembayaran QRIS'))
       return ''
     } finally {
       setQrisChecking(false)
+    }
+  }
+
+  const manualConfirmQris = async () => {
+    if (!qrisData?.order_id) return toast.error('Buat QRIS dulu')
+    if (!window.confirm('Tandai pembayaran ini LUNAS secara manual?\n\nHanya untuk ujicoba sandbox — pastikan pembayaran benar-benar sudah diterima.')) return
+
+    setManualConfirming(true)
+    setQrisError('')
+    try {
+      await api.post('/penjualan/qris/manual-confirm', { order_id: qrisData.order_id })
+      setQrisStatus('settlement')
+      toast.success('Pembayaran ditandai lunas (sandbox)')
+    } catch (e) {
+      setQrisError(getApiErrorMessage(e, 'Gagal mengonfirmasi pembayaran'))
+    } finally {
+      setManualConfirming(false)
     }
   }
 
@@ -235,16 +278,17 @@ export default function TransaksiPenjualan() {
   }
 
   const handleCheckout = async (method = paymentMethod) => {
+    if (businessRequest.isBusy()) return
     if (cart.length === 0) return toast.error('Keranjang kosong')
     if (method === 'tunai' && uangBayarValue < totalHarga) return toast.error('Uang bayar kurang')
     if (method === 'qris' && qrisData?.order_id && !['settlement', 'capture'].includes(qrisStatus)) {
-      const latestStatus = await checkMidtransQrisStatus(false)
+      const latestStatus = await checkQrisStatus(false)
       if (!['settlement', 'capture'].includes(latestStatus)) {
-        return toast.error('Pembayaran QRIS belum berhasil. Bayar lewat simulator Midtrans dulu, lalu cek status.')
+        return toast.error('Pembayaran QRIS belum berhasil. Selesaikan pembayaran lalu cek status.')
       }
     }
     if (method === 'qris' && !qrisData?.order_id) {
-      return toast.error('Buat QRIS Midtrans dulu sebelum konfirmasi')
+      return toast.error('Buat QRIS dulu sebelum konfirmasi')
     }
     const stockProblem = cart.find(item => item.jumlah > Number(item.stok))
     if (stockProblem) return toast.error(`Stok ${stockProblem.nama_barang} tidak cukup`)
@@ -261,12 +305,13 @@ export default function TransaksiPenjualan() {
 
     setLoading(true)
     try {
-      const res = await api.post('/penjualan', {
+      const res = await businessRequest.submit('/penjualan', {
         items: receiptItems,
         metode_pembayaran: method,
         uang_bayar: method === 'tunai' ? receiptPaid : null,
         qris_order_id: method === 'qris' ? qrisData?.order_id : null
       })
+      if (!res) return
       if (method === 'qris') {
         playPaymentSuccessSound()
         speakQrisPaymentSuccess(receiptTotal)
@@ -275,6 +320,7 @@ export default function TransaksiPenjualan() {
       setLastReceipt({
         kode_transaksi: res.data?.transaksi?.kode_transaksi || `TRX-${Date.now()}`,
         waktu: new Date().toISOString(),
+        kasir: res.data?.transaksi?.kasir || '',
         metode_pembayaran: method,
         items: receiptItems,
         total: Number(res.data?.transaksi?.total_harga || receiptTotal),
@@ -467,11 +513,16 @@ export default function TransaksiPenjualan() {
         qrisChecking={qrisChecking}
         qrisError={qrisError}
         qrisStatus={qrisStatus}
-        onCreateQris={createMidtransQris}
+        onCreateQris={createQris}
         onCopyQrisUrl={copyQrisUrl}
         onOpenSimulator={openMidtransSimulator}
-        onCheckQrisStatus={checkMidtransQrisStatus}
+        onCheckQrisStatus={checkQrisStatus}
+        onOpenPaymentPage={openPaymentPage}
+        onManualConfirm={manualConfirmQris}
+        manualConfirming={manualConfirming}
         formatQrisStatus={formatQrisStatus}
+        onOpenSimulationPage={openSimulationPage}
+        onCopySimulationLink={copySimulationLink}
       />
 
       <SalesReceiptModal

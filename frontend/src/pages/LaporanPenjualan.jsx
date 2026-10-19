@@ -15,6 +15,8 @@ const toInputDate = (date) => {
 }
 
 export default function LaporanPenjualan() {
+  const { user } = useAuth()
+  const canWrite = user?.role === 'kasir'
   const [data, setData] = useState({ transaksi: [], total_penjualan: 0, total_transaksi: 0, chart_data: [] })
   const [customerReturns, setCustomerReturns] = useState([])
   const [startDate, setStartDate] = useState(toInputDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
@@ -305,10 +307,10 @@ export default function LaporanPenjualan() {
               <FileSpreadsheet size={17} />
               <span>Excel</span>
             </button>
-            <button type="button" onClick={resetReport} disabled={resetting || loading} className="report-action-button reset">
+            {canWrite && <button type="button" onClick={resetReport} disabled={resetting || loading} className="report-action-button reset">
               <RotateCcw size={17} />
               <span>{resetting ? 'Reset...' : 'Reset'}</span>
-            </button>
+            </button>}
           </div>
         </div>
       </div>
@@ -396,7 +398,7 @@ export default function LaporanPenjualan() {
                       <span>{transaction.details?.length || 0} item terjual</span>
                     </div>
                   </td>
-                  <td>{new Date(transaction.tanggal).toLocaleDateString('id-ID')}</td>
+                  <td className="nowrap">{new Date(transaction.tanggal).toLocaleDateString('id-ID')}</td>
                   <td><span className={`payment-pill ${transaction.metode_pembayaran}`}>{transaction.metode_pembayaran}</span></td>
                   <td><span className={`status-pill ${getStatusClass(transaction.status)}`}>{transaction.status}</span></td>
                   <td>{transaction.has_customer_return ? <span className="status-pill pending">Ada Retur</span> : '-'}</td>
@@ -405,7 +407,7 @@ export default function LaporanPenjualan() {
                   <td>
                     <div className="table-actions">
                       <button type="button" className="table-action-button" onClick={() => setSelectedTransaction(transaction)}><Eye size={15} />Detail</button>
-                      <button type="button" className="table-action-button danger" onClick={() => openCancelDialog(transaction)} disabled={transaction.status === 'batal'}><XCircle size={15} />Batal</button>
+                      {canWrite && <button type="button" className="table-action-button danger" onClick={() => openCancelDialog(transaction)} disabled={transaction.status === 'batal'}><XCircle size={15} />Batal</button>}
                     </div>
                   </td>
                 </tr>
@@ -453,7 +455,7 @@ export default function LaporanPenjualan() {
               <div className="receipt-meta">
                 <div><span>No</span><strong>{selectedTransaction.kode_transaksi}</strong></div>
                 <div><span>Waktu</span><strong>{formatDateTime(selectedTransaction.created_at || selectedTransaction.tanggal)}</strong></div>
-                <div><span>Kasir</span><strong>{selectedTransaction.kasir || 'Admin'}</strong></div>
+                <div><span>Kasir</span><strong>{selectedTransaction.kasir || '-'}</strong></div>
                 <div><span>Status</span><strong>{selectedTransaction.status}</strong></div>
                 <div><span>Bayar</span><strong>{selectedTransaction.metode_pembayaran?.toUpperCase()}</strong></div>
                 <div><span>Retur</span><strong>{selectedTransaction.has_customer_return ? 'Ada Retur' : '-'}</strong></div>
@@ -540,3 +542,4 @@ export default function LaporanPenjualan() {
     </div>
   )
 }
+import { useAuth } from '../hooks/useAuth'

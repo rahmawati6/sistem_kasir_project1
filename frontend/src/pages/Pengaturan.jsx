@@ -3,8 +3,12 @@ import { Activity, DatabaseBackup, Download, Search, Settings, Upload } from 'lu
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 import Modal from '../components/Common/Modal'
+import ChangePasswordForm from '../components/Auth/ChangePasswordForm'
+import { formatDateTime } from '../utils/formatDateTime'
 
 export default function Pengaturan() {
+  const { user } = useAuth()
+  const canWrite = user?.role === 'kasir'
   const [activeTab, setActiveTab] = useState('aktivitas')
   const [activityData, setActivityData] = useState([])
   const [module, setModule] = useState('semua')
@@ -90,8 +94,11 @@ export default function Pengaturan() {
         <button type="button" className={activeTab === 'aktivitas' ? 'active' : ''} onClick={() => setActiveTab('aktivitas')}>
           <Activity size={18} /> Riwayat Aktivitas
         </button>
-        <button type="button" className={activeTab === 'backup' ? 'active' : ''} onClick={() => setActiveTab('backup')}>
+        {canWrite && <button type="button" className={activeTab === 'backup' ? 'active' : ''} onClick={() => setActiveTab('backup')}>
           <DatabaseBackup size={18} /> Backup Data
+        </button>}
+        <button type="button" className={activeTab === 'password' ? 'active' : ''} onClick={() => setActiveTab('password')}>
+          <Settings size={18} /> Ubah Password
         </button>
       </div>
 
@@ -110,7 +117,7 @@ export default function Pengaturan() {
                 <thead><tr><th>Waktu</th><th>Modul</th><th>Aksi</th><th>Keterangan</th><th>User</th></tr></thead>
                 <tbody>{activityData.map(item => (
                   <tr key={item.id}>
-                    <td>{new Date(item.created_at).toLocaleString('id-ID')}</td>
+                    <td className="nowrap">{formatDateTime(item.created_at)}</td>
                     <td><span className="service-pill blue">{item.module}</span></td>
                     <td>{item.action}</td>
                     <td>{item.description || '-'}</td>
@@ -121,7 +128,7 @@ export default function Pengaturan() {
             </div>
           </section>
         </>
-      ) : (
+      ) : activeTab === 'password' ? <ChangePasswordForm /> : (
         <div className="settings-backup-grid">
           <section className="brilink-form-card settings-backup-card">
             <div className="brilink-section-title"><DatabaseBackup size={22} /><div><h2>Backup JSON</h2><p>Simpan file backup di flashdisk atau cloud agar data toko punya cadangan.</p></div></div>
@@ -177,3 +184,4 @@ export default function Pengaturan() {
     </div>
   )
 }
+import { useAuth } from '../hooks/useAuth'
