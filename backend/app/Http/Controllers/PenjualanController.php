@@ -7,7 +7,6 @@ use App\Models\TransaksiPenjualan;
 use App\Models\DetailPenjualan;
 use App\Models\Barang;
 use App\Models\ActivityLog;
-use App\Models\ReturPenjualan;
 use App\Models\ReturPelanggan;
 use App\Models\PembayaranQris;
 use Carbon\Carbon;
@@ -27,7 +26,7 @@ class PenjualanController extends Controller
     public function index()
     {
         return response()->json(
-            TransaksiPenjualan::with('details')->orderBy('created_at', 'desc')->get()
+            TransaksiPenjualan::with('details')->orderBy('dibuat_pada', 'desc')->get()
         );
     }
 
@@ -144,7 +143,7 @@ class PenjualanController extends Controller
                     // Alur Midtrans: status sudah dicek langsung ke Midtrans oleh kasir.
                     PembayaranQris::create([
                         'order_id' => $data['qris_order_id'],
-                        'provider' => 'midtrans',
+                        'penyedia' => 'midtrans',
                         'transaksi_penjualan_id' => $transaksi->id,
                         'nominal' => $totalHarga,
                         'status_pembayaran' => 'settlement',
@@ -267,7 +266,7 @@ class PenjualanController extends Controller
 
         PembayaranQris::create([
             'order_id' => $orderId,
-            'provider' => 'sumopod',
+            'penyedia' => 'sumopod',
             'transaksi_penjualan_id' => null,
             'nominal' => $totalHarga,
             'payment_url' => $paymentUrl,
@@ -277,7 +276,7 @@ class PenjualanController extends Controller
         ]);
 
         return response()->json([
-            'provider' => 'sumopod',
+            'penyedia' => 'sumopod',
             'order_id' => $orderId,
             'qris_url' => $paymentUrl,
             'qr_image_url' => null,
@@ -337,7 +336,7 @@ class PenjualanController extends Controller
         $qrisUrl = collect($body['actions'] ?? [])->firstWhere('name', 'generate-qr-code')['url'] ?? null;
 
         return response()->json([
-            'provider' => 'midtrans',
+            'penyedia' => 'midtrans',
             'order_id' => $orderId,
             'qris_url' => $qrisUrl,
             'qr_image_url' => $qrisUrl,
@@ -359,14 +358,14 @@ class PenjualanController extends Controller
         // Status disimpan lokal, diperbarui oleh webhook payment.completed / payment.failed /
         // payment.expired, dan dicek ulang langsung ke SumoPod bila webhook belum sampai.
         $sumopod = PembayaranQris::where('order_id', $data['order_id'])
-            ->where('provider', 'sumopod')
+            ->where('penyedia', 'sumopod')
             ->first();
 
         if ($sumopod) {
             $sumopod = $this->syncSumopodStatus($sumopod);
 
             return response()->json([
-                'provider' => 'sumopod',
+                'penyedia' => 'sumopod',
                 'order_id' => $sumopod->order_id,
                 'status' => $sumopod->status_pembayaran,
                 'gross_amount' => $sumopod->nominal,
@@ -397,7 +396,7 @@ class PenjualanController extends Controller
         $body = $response->json();
 
         return response()->json([
-            'provider' => 'midtrans',
+            'penyedia' => 'midtrans',
             'order_id' => $data['order_id'],
             'status' => $body['transaction_status'] ?? 'unknown',
             'fraud_status' => $body['fraud_status'] ?? null,
@@ -431,9 +430,7 @@ class PenjualanController extends Controller
             foreach ($transaksi->details as $detail) {
                 $barang = Barang::lockForUpdate()->find($detail->barang_id);
                 if ($barang) {
-                    $jumlahReturLama = ReturPenjualan::where('detail_penjualan_id', $detail->id)->sum('jumlah');
-                    $jumlahReturPelanggan = ReturPelanggan::where('detail_penjualan_id', $detail->id)->sum('jumlah_retur');
-                    $jumlahRetur = (int) $jumlahReturLama + (int) $jumlahReturPelanggan;
+                    $jumlahRetur = (int) ReturPelanggan::where('detail_penjualan_id', $detail->id)->sum('jumlah_retur');
                     $jumlahKembali = max((int) $detail->jumlah - (int) $jumlahRetur, 0);
                     $barang->stok += $jumlahKembali;
                     $barang->save();
@@ -506,9 +503,7 @@ class PenjualanController extends Controller
                 abort(422, 'Jumlah retur melebihi jumlah pembelian.');
             }
 
-            $jumlahReturLama = ReturPenjualan::where('detail_penjualan_id', $detail->id)->sum('jumlah');
-            $jumlahReturPelanggan = ReturPelanggan::where('detail_penjualan_id', $detail->id)->sum('jumlah_retur');
-            $jumlahSudahRetur = (int) $jumlahReturLama + (int) $jumlahReturPelanggan;
+            $jumlahSudahRetur = (int) ReturPelanggan::where('detail_penjualan_id', $detail->id)->sum('jumlah_retur');
             $sisaBisaRetur = (int) $detail->jumlah - (int) $jumlahSudahRetur;
 
             if ((int) $data['jumlah'] > $sisaBisaRetur) {
@@ -627,7 +622,7 @@ class PenjualanController extends Controller
             return response()->json(['message' => 'order_id tidak ditemukan pada payload'], 202);
         }
 
-        $qris = PembayaranQris::where('order_id', $orderId)->where('provider', 'sumopod')->first();
+        $qris = PembayaranQris::where('order_id', $orderId)->where('penyedia', 'sumopod')->first();
         if (!$qris) {
             return response()->json(['message' => 'Pembayaran SumoPod tidak ditemukan: ' . $orderId], 202);
         }
@@ -671,7 +666,7 @@ class PenjualanController extends Controller
      */
     private function syncSumopodStatus(PembayaranQris $qris): PembayaranQris
     {
-        if ($qris->provider !== 'sumopod' || !$qris->transaction_id) {
+        if ($qris->penyedia !== 'sumopod' || !$qris->transaction_id) {
             return $qris;
         }
 
@@ -780,7 +775,7 @@ class PenjualanController extends Controller
         ]);
 
         $qris = PembayaranQris::where('order_id', $data['order_id'])
-            ->where('provider', 'sumopod')
+            ->where('penyedia', 'sumopod')
             ->first();
 
         if (!$qris) {
@@ -796,7 +791,7 @@ class PenjualanController extends Controller
         $qris->paid_at = now();
         $qris->payment_response = array_merge((array) $qris->payment_response, [
             'manual_confirm' => [
-                'by' => $request->user()->username ?? $request->user()->name ?? 'unknown',
+                'by' => $request->user()->username ?? $request->user()->nama ?? 'unknown',
                 'at' => now()->toISOString(),
                 'environment' => 'sandbox',
             ],

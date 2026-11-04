@@ -3,12 +3,11 @@ import { Activity, DatabaseBackup, Download, Search, Settings, Upload } from 'lu
 import api, { getApiErrorMessage } from '../services/api'
 import toast from 'react-hot-toast'
 import Modal from '../components/Common/Modal'
-import ChangePasswordForm from '../components/Auth/ChangePasswordForm'
 import { formatDateTime } from '../utils/formatDateTime'
 
 export default function Pengaturan() {
   const { user } = useAuth()
-  const canWrite = user?.role === 'kasir'
+  const canWrite = user?.peran === 'kasir'
   const [activeTab, setActiveTab] = useState('aktivitas')
   const [activityData, setActivityData] = useState([])
   const [module, setModule] = useState('semua')
@@ -97,9 +96,6 @@ export default function Pengaturan() {
         {canWrite && <button type="button" className={activeTab === 'backup' ? 'active' : ''} onClick={() => setActiveTab('backup')}>
           <DatabaseBackup size={18} /> Backup Data
         </button>}
-        <button type="button" className={activeTab === 'password' ? 'active' : ''} onClick={() => setActiveTab('password')}>
-          <Settings size={18} /> Ubah Password
-        </button>
       </div>
 
       {activeTab === 'aktivitas' ? (
@@ -114,21 +110,21 @@ export default function Pengaturan() {
             <div className="brilink-table-header"><div><h2>Log Aktivitas</h2><p>{activityData.length} aktivitas terbaru</p></div><Activity size={20} /></div>
             <div className="brilink-table-wrap">
               <table className="brilink-table">
-                <thead><tr><th>Waktu</th><th>Modul</th><th>Aksi</th><th>Keterangan</th><th>User</th></tr></thead>
+                <thead><tr><th>Waktu</th><th>Modul</th><th>Aksi</th><th>Keterangan</th><th>Pengguna</th></tr></thead>
                 <tbody>{activityData.map(item => (
                   <tr key={item.id}>
-                    <td className="nowrap">{formatDateTime(item.created_at)}</td>
-                    <td><span className="service-pill blue">{item.module}</span></td>
-                    <td>{item.action}</td>
-                    <td>{item.description || '-'}</td>
-                    <td>{item.user_name}</td>
+                    <td className="nowrap">{formatDateTime(item.dibuat_pada)}</td>
+                    <td><span className="service-pill blue">{item.modul}</span></td>
+                    <td>{item.aksi}</td>
+                    <td>{item.keterangan || '-'}</td>
+                    <td>{item.nama_pengguna}</td>
                   </tr>
                 ))}</tbody>
               </table>
             </div>
           </section>
         </>
-      ) : activeTab === 'password' ? <ChangePasswordForm /> : (
+      ) : (
         <div className="settings-backup-grid">
           <section className="brilink-form-card settings-backup-card">
             <div className="brilink-section-title"><DatabaseBackup size={22} /><div><h2>Backup JSON</h2><p>Simpan file backup di flashdisk atau cloud agar data toko punya cadangan.</p></div></div>

@@ -10,31 +10,29 @@ class DatabaseSchemaNormalizationTest extends TestCase
     private const BUSINESS_TABLES = [
         'users', 'barang', 'transaksi_penjualan', 'detail_penjualan', 'pembayaran_qris',
         'transaksi_transfer', 'transaksi_tarik_tunai', 'transaksi_setor_tunai',
-        'pembayaran_tagihan', 'transaksi_pulsa', 'transaksi_ewallet', 'biaya_admin',
-        'biaya_admin_brilink', 'providers', 'pengeluaran_toko', 'retur_penjualan',
+        'pembayaran_tagihan', 'transaksi_pulsa', 'transaksi_ewallet',
+        'biaya_admin_brilink', 'providers', 'pengeluaran_toko',
         'retur_pelanggan', 'retur_supplier', 'activity_logs', 'notifikasi',
     ];
 
     private const VARCHAR_TARGETS = [
-        'users' => ['name' => 50, 'username' => 50, 'password' => 255, 'remember_token' => 100],
+        'users' => ['nama' => 50, 'username' => 50, 'password' => 255, 'remember_token' => 100],
         'barang' => ['kode_barang' => 50, 'nama_barang' => 150, 'kategori' => 100],
         'transaksi_penjualan' => ['kode_transaksi' => 50, 'kasir' => 100],
         'detail_penjualan' => ['kode_barang' => 50, 'nama_barang' => 150],
         'pembayaran_qris' => ['order_id' => 100, 'snap_token' => 255, 'transaction_id' => 100],
-        'transaksi_transfer' => ['kode_transaksi' => 50, 'provider' => 100, 'jenis_kartu' => 50, 'jenis_transfer' => 50, 'bank_tujuan' => 100, 'nomor_rekening_tujuan' => 30, 'nama_penerima' => 100, 'kasir' => 100],
-        'transaksi_tarik_tunai' => ['kode_transaksi' => 50, 'provider' => 100, 'jenis_kartu' => 50, 'nomor_rekening' => 30, 'nama_penerima' => 100, 'nomor_hp' => 20, 'kasir' => 100],
-        'transaksi_setor_tunai' => ['kode_transaksi' => 50, 'provider' => 100, 'jenis_kartu' => 50, 'nomor_rekening_tujuan' => 30, 'nama_pemilik_rekening' => 100, 'bank_tujuan' => 100, 'sumber_dana' => 100, 'kasir' => 100],
-        'pembayaran_tagihan' => ['kode_transaksi' => 50, 'provider' => 100, 'jenis_kartu' => 50, 'nomor_pelanggan' => 50, 'nama_pelanggan' => 100, 'kasir' => 100],
-        'transaksi_pulsa' => ['kode_transaksi' => 50, 'provider' => 100, 'jenis_kartu' => 50, 'operator' => 50, 'nomor_tujuan' => 20, 'produk' => 150, 'kasir' => 100],
-        'transaksi_ewallet' => ['kode_transaksi' => 50, 'provider' => 100, 'jenis_ewallet' => 100, 'nomor_ewallet' => 30, 'nama_customer' => 100, 'kasir' => 100],
-        'biaya_admin' => ['layanan' => 50],
+        'transaksi_transfer' => ['kode_transaksi' => 50, 'penyedia' => 100, 'jenis_kartu' => 50, 'jenis_transfer' => 50, 'bank_tujuan' => 100, 'nomor_rekening_tujuan' => 30, 'nama_penerima' => 100, 'kasir' => 100],
+        'transaksi_tarik_tunai' => ['kode_transaksi' => 50, 'penyedia' => 100, 'jenis_kartu' => 50, 'nomor_rekening' => 30, 'nama_penerima' => 100, 'nomor_hp' => 20, 'kasir' => 100],
+        'transaksi_setor_tunai' => ['kode_transaksi' => 50, 'penyedia' => 100, 'jenis_kartu' => 50, 'nomor_rekening_tujuan' => 30, 'nama_pemilik_rekening' => 100, 'bank_tujuan' => 100, 'sumber_dana' => 100, 'kasir' => 100],
+        'pembayaran_tagihan' => ['kode_transaksi' => 50, 'penyedia' => 100, 'jenis_kartu' => 50, 'nomor_pelanggan' => 50, 'nama_pelanggan' => 100, 'kasir' => 100],
+        'transaksi_pulsa' => ['kode_transaksi' => 50, 'penyedia' => 100, 'jenis_kartu' => 50, 'operator' => 50, 'nomor_tujuan' => 20, 'produk' => 150, 'kasir' => 100],
+        'transaksi_ewallet' => ['kode_transaksi' => 50, 'penyedia' => 100, 'jenis_ewallet' => 100, 'nomor_ewallet' => 30, 'nama_customer' => 100, 'kasir' => 100],
         'biaya_admin_brilink' => ['jenis_transaksi' => 50, 'jenis_kartu' => 50],
         'providers' => ['nama_provider' => 100],
         'pengeluaran_toko' => ['kategori' => 100, 'nama_pengeluaran' => 150, 'kasir' => 100],
-        'retur_penjualan' => ['kode_retur' => 50, 'kasir' => 100],
         'retur_pelanggan' => ['nomor_retur' => 50, 'kode_transaksi' => 50, 'kode_barang' => 50, 'nama_barang' => 150, 'alasan_retur' => 255, 'metode_pengembalian_dana' => 50],
         'retur_supplier' => ['nomor_retur' => 50, 'nama_supplier' => 150, 'kode_barang' => 50, 'nama_barang' => 150, 'kasir' => 100],
-        'activity_logs' => ['user_name' => 100, 'module' => 50, 'action' => 50],
+        'activity_logs' => ['nama_pengguna' => 100, 'modul' => 50, 'aksi' => 50],
         'notifikasi' => ['tipe' => 50, 'judul' => 150, 'referensi_tipe' => 100, 'url' => 255, 'fingerprint' => 191],
     ];
 
@@ -49,12 +47,11 @@ class DatabaseSchemaNormalizationTest extends TestCase
     ];
 
     private const SPECIAL_VARCHAR_MODIFIERS = [
-        'activity_logs.user_name' => ['NO', 'admin'],
+        'activity_logs.nama_pengguna' => ['NO', 'admin'],
         'pembayaran_qris.transaction_id' => ['YES', null],
         'pembayaran_tagihan.jenis_kartu' => ['NO', 'Kartu Nasabah'],
         'pembayaran_tagihan.kasir' => ['NO', 'admin'],
         'pengeluaran_toko.kasir' => ['NO', 'admin'],
-        'retur_penjualan.kasir' => ['NO', 'admin'],
         'retur_supplier.kasir' => ['NO', 'admin'],
         'transaksi_ewallet.kasir' => ['NO', 'admin'],
         'transaksi_ewallet.nama_customer' => ['YES', null],
@@ -88,13 +85,11 @@ class DatabaseSchemaNormalizationTest extends TestCase
         'transaksi_pulsa.transaksi_pulsa_kode_transaksi_unique' => [['kode_transaksi'], true],
         'transaksi_ewallet.transaksi_ewallet_kode_transaksi_unique' => [['kode_transaksi'], true],
         'providers.providers_nama_provider_unique' => [['nama_provider'], true],
-        'retur_penjualan.retur_penjualan_kode_retur_unique' => [['kode_retur'], true],
         'retur_pelanggan.retur_pelanggan_nomor_retur_unique' => [['nomor_retur'], true],
         'retur_supplier.retur_supplier_nomor_retur_unique' => [['nomor_retur'], true],
-        'biaya_admin.biaya_admin_layanan_jenis_nasabah_index' => [['layanan', 'jenis_nasabah'], false],
         'biaya_admin_brilink.biaya_admin_brilink_lookup' => [['jenis_transaksi', 'jenis_nasabah', 'nominal_min'], false],
         'notifikasi.notifikasi_user_fingerprint_unique' => [['user_id', 'fingerprint'], true],
-        'notifikasi.notifikasi_user_read_created_index' => [['user_id', 'dibaca_at', 'created_at'], false],
+        'notifikasi.notifikasi_user_read_created_index' => [['user_id', 'dibaca_at', 'dibuat_pada'], false],
         'notifikasi.notifikasi_referensi_index' => [['referensi_tipe', 'referensi_id'], false],
         'notifikasi.notifikasi_tipe_index' => [['tipe'], false],
     ];
@@ -105,7 +100,7 @@ class DatabaseSchemaNormalizationTest extends TestCase
             ->where('TABLE_SCHEMA', DB::connection()->getDatabaseName())
             ->whereIn('TABLE_NAME', self::BUSINESS_TABLES)
             ->count();
-        $this->assertSame(20, $businessTableCount);
+        $this->assertSame(18, $businessTableCount);
 
         foreach (self::BUSINESS_TABLES as $table) {
             $column = $this->column($table, 'id');
@@ -156,9 +151,6 @@ class DatabaseSchemaNormalizationTest extends TestCase
             'detail_penjualan_barang_id_foreign' => ['detail_penjualan', 'barang_id', 'barang', 'NO ACTION', 'NO'],
             'detail_penjualan_transaksi_penjualan_id_foreign' => ['detail_penjualan', 'transaksi_penjualan_id', 'transaksi_penjualan', 'CASCADE', 'NO'],
             'pembayaran_qris_transaksi_penjualan_id_foreign' => ['pembayaran_qris', 'transaksi_penjualan_id', 'transaksi_penjualan', 'NO ACTION', 'NO'],
-            'retur_penjualan_barang_id_foreign' => ['retur_penjualan', 'barang_id', 'barang', 'CASCADE', 'NO'],
-            'retur_penjualan_detail_penjualan_id_foreign' => ['retur_penjualan', 'detail_penjualan_id', 'detail_penjualan', 'CASCADE', 'NO'],
-            'retur_penjualan_transaksi_penjualan_id_foreign' => ['retur_penjualan', 'transaksi_penjualan_id', 'transaksi_penjualan', 'CASCADE', 'NO'],
             'retur_pelanggan_barang_id_foreign' => ['retur_pelanggan', 'barang_id', 'barang', 'SET NULL', 'YES'],
             'retur_pelanggan_detail_penjualan_id_foreign' => ['retur_pelanggan', 'detail_penjualan_id', 'detail_penjualan', 'SET NULL', 'YES'],
             'retur_pelanggan_transaksi_penjualan_id_foreign' => ['retur_pelanggan', 'transaksi_penjualan_id', 'transaksi_penjualan', 'SET NULL', 'YES'],
@@ -171,7 +163,7 @@ class DatabaseSchemaNormalizationTest extends TestCase
             ->where('CONSTRAINT_SCHEMA', DB::connection()->getDatabaseName())
             ->whereNotNull('REFERENCED_TABLE_NAME')
             ->count();
-        $this->assertSame(12, $actualForeignKeyCount);
+        $this->assertSame(9, $actualForeignKeyCount);
 
         foreach ($expected as $name => [$table, $column, $referencedTable, $deleteRule, $nullable]) {
             $foreignKey = DB::selectOne(
@@ -220,23 +212,20 @@ class DatabaseSchemaNormalizationTest extends TestCase
         $actualTypes = collect($typeCounts)->mapWithKeys(
             fn ($row) => ["{$row->DATA_TYPE}|{$row->COLUMN_TYPE}" => (int) $row->total]
         )->all();
-        $this->assertSame(33, $actualTypes['decimal|decimal(15,2)'] ?? 0);
-        $this->assertSame(3, $actualTypes['json|json'] ?? 0);
-        $this->assertSame(11, $actualTypes['text|text'] ?? 0);
+        $this->assertSame(31, $actualTypes['decimal|decimal(15,2)'] ?? 0);
+        $this->assertSame(2, $actualTypes['json|json'] ?? 0);
+        $this->assertSame(10, $actualTypes['text|text'] ?? 0);
         $this->assertSame(10, $actualTypes['date|date'] ?? 0);
         $usernameComplete = DB::table('migrations')->where('migration', '2026_10_08_000001_remove_legacy_email_from_users')->exists();
         // The only removed non-varchar column is legacy users.email_verified_at.
-        $this->assertSame($usernameComplete ? 42 : 43, $actualTypes['timestamp|timestamp'] ?? 0);
-        $roleComplete = \Illuminate\Support\Facades\Schema::hasColumn('users','is_active');
-        $this->assertSame($roleComplete ? 5 : 4, $actualTypes['tinyint|tinyint(1)'] ?? 0);
+        $this->assertSame($usernameComplete ? 39 : 40, $actualTypes['timestamp|timestamp'] ?? 0);
+        $roleComplete = \Illuminate\Support\Facades\Schema::hasColumn('users','aktif');
+        $this->assertSame($roleComplete ? 4 : 3, $actualTypes['tinyint|tinyint(1)'] ?? 0);
 
         $orphanChecks = [
             ['detail_penjualan', 'transaksi_penjualan_id', 'transaksi_penjualan', false],
             ['detail_penjualan', 'barang_id', 'barang', false],
             ['pembayaran_qris', 'transaksi_penjualan_id', 'transaksi_penjualan', true],
-            ['retur_penjualan', 'transaksi_penjualan_id', 'transaksi_penjualan', false],
-            ['retur_penjualan', 'detail_penjualan_id', 'detail_penjualan', false],
-            ['retur_penjualan', 'barang_id', 'barang', false],
             ['retur_pelanggan', 'transaksi_penjualan_id', 'transaksi_penjualan', true],
             ['retur_pelanggan', 'detail_penjualan_id', 'detail_penjualan', true],
             ['retur_pelanggan', 'barang_id', 'barang', true],
